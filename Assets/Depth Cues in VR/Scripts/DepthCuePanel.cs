@@ -14,6 +14,7 @@ public class DepthCuePanel : MonoBehaviour
     private static bool occlusionEnabled = true;
     private static bool disparityEnabled = true;
     private static bool motionParallaxEnabled = true;
+    private static bool atmosphericPerspectiveEnabled = true;
 
     private static Vector3 startPosition;
     private static Camera cam;
@@ -26,6 +27,20 @@ public class DepthCuePanel : MonoBehaviour
     {
         allRenderers = FindObjectsByType<Renderer>(FindObjectsSortMode.None);
         cam = Camera.main;
+    }
+
+    public void ToggleAtmosphericPerspective()
+    {
+        atmosphericPerspectiveEnabled = !atmosphericPerspectiveEnabled;
+
+        if (!atmosphericPerspectiveEnabled)
+        {
+            RenderSettings.fog = false;
+        }
+        else
+        {
+            RenderSettings.fog = true;
+        }
     }
 
     public static void ToggleMotionParallax()
