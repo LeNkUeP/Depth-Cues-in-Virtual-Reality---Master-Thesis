@@ -1,20 +1,91 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.InputSystem.XR;
 using UnityEngine.Rendering;
+using UnityEngine.XR;
 
 public class DepthCuePanel : MonoBehaviour
 {
     private static bool shadowCastEnabled = true;
     private static bool shapeFromShadingEnabled = true;
     private static bool occlusionEnabled = true;
+    private static bool disparityEnabled = true;
+    private static bool motionParallaxEnabled = true;
 
+    private static Vector3 startPosition;
+    private static Camera cam;
+    private static Vector3 cameraLocalScale;
+    private static Renderer[] allRenderers;
     private static Dictionary<Renderer, Material[]> originalMaterials = new Dictionary<Renderer, Material[]>();
     private static Dictionary<Material, Material> unlitCache = new Dictionary<Material, Material>();
 
+    public void Start()
+    {
+        allRenderers = FindObjectsByType<Renderer>(FindObjectsSortMode.None);
+        cam = Camera.main;
+    }
+
+    public static void ToggleMotionParallax()
+    {
+        motionParallaxEnabled = !motionParallaxEnabled;
+
+        CharacterController characterController = FindFirstObjectByType<CharacterController>();
+        TrackedPoseDriver poseDriver = cam.transform.GetComponent<TrackedPoseDriver>();
+        startPosition = cam.transform.position;
+
+        if (!motionParallaxEnabled)
+        {
+            poseDriver.trackingType = TrackedPoseDriver.TrackingType.RotationOnly;
+            cam.transform.position = startPosition;
+            characterController.enabled = false;
+        }else
+        {
+            poseDriver.trackingType = TrackedPoseDriver.TrackingType.RotationAndPosition;
+            characterController.enabled = true;
+        }
+
+        Debug.Log("Motion Parallax: " + (motionParallaxEnabled ? "ENABLED" : "DISABLED"));
+    }
+
+    public static void ToggleDisparity()
+    {
+        disparityEnabled = !disparityEnabled;
+
+        if (!disparityEnabled)
+        {
+            cameraLocalScale = cam.transform.localScale;
+            cam.transform.localScale = Vector3.zero;
+        }
+        else
+        {
+            cam.transform.localScale = cameraLocalScale;
+        }
+
+        Debug.Log("Disparity: " + (disparityEnabled ? "ENABLED" : "DISABLED"));
+    }
+
+    //void OnPreCull()
+    //{
+    //    if (disparityEnabled && cam != null && XRSettings.enabled)
+    //    {
+    //        Matrix4x4 leftView = cam.GetStereoViewMatrix(Camera.StereoscopicEye.Left);
+    //        Matrix4x4 leftProj = cam.GetStereoProjectionMatrix(Camera.StereoscopicEye.Left);
+
+    //        cam.SetStereoViewMatrix(Camera.StereoscopicEye.Right, leftView);
+    //        cam.SetStereoProjectionMatrix(Camera.StereoscopicEye.Right, leftProj);
+    //    }
+    //    else if (!disparityEnabled && cam != null)
+    //    {
+    //        cam.ResetStereoViewMatrices();
+    //        cam.ResetStereoProjectionMatrices();
+    //    }
+    //}
+
     public static void ToggleShadowCast()
     {
-        Renderer[] allRenderers = FindObjectsByType<Renderer>(FindObjectsSortMode.None);
         shadowCastEnabled = !shadowCastEnabled;
 
         foreach (Renderer rend in allRenderers)
@@ -28,7 +99,6 @@ public class DepthCuePanel : MonoBehaviour
 
     public static void ToggleShapeFromShading()
     {
-        Renderer[] allRenderers = FindObjectsByType<Renderer>(FindObjectsSortMode.None);
         shapeFromShadingEnabled = !shapeFromShadingEnabled;
 
         foreach (Renderer rend in allRenderers)
@@ -80,7 +150,11 @@ public class DepthCuePanel : MonoBehaviour
 
     public static void ToggleOcclusion()
     {
-        Renderer[] allRenderers = FindObjectsByType<Renderer>(FindObjectsSortMode.None);
+        if (true)
+        {
+            return;
+        }
+
         occlusionEnabled = !occlusionEnabled;
 
         foreach (Renderer rend in allRenderers)
@@ -92,17 +166,56 @@ public class DepthCuePanel : MonoBehaviour
                     // Depth Test und Write wieder normal
                     mat.SetInt("_ZTest", (int)CompareFunction.LessEqual);
                     mat.SetInt("_ZWrite", 1);
+                    //mat.renderQueue = -1;
                 }
                 else
                 {
                     // Depth Test auf Always und ZWrite aus
-                    mat.SetInt("_ZTest", (int)CompareFunction.Always);
+                    mat.SetInt("_ZTest", (int)CompareFunction.Greater);
                     mat.SetInt("_ZWrite", 0);
-                    mat.renderQueue = (int)RenderQueue.Transparent;
+                    //mat.renderQueue = (int)RenderQueue.Transparent;
+                    //mat.renderQueue = 5000;
                 }
             }
         }
 
         Debug.Log("Occlusion " + (occlusionEnabled ? "enabled" : "disabled"));
     }
+
+    //public void ToggleOcclusion()
+    //{
+    //    StartCoroutine(ChangeRenderQueueLoop());
+    //    Debug.Log("Occlusion " + (occlusionEnabled ? "enabled" : "disabled"));
+    //}
+
+    //public static int baseQueue = 3000;
+
+    //public static IEnumerator ChangeRenderQueueLoop()
+    //{
+    //    List<Renderer> renderers = allRenderers.ToList();
+    //    occlusionEnabled = !occlusionEnabled;
+
+    //    while (true)
+    //    {
+    //        if (renderers == null || renderers.Count == 0)
+    //            yield break;
+
+    //        // Rotiert die Liste
+    //        Renderer last = renderers[renderers.Count - 1];
+    //        renderers.RemoveAt(renderers.Count - 1);
+    //        renderers.Insert(0, last);
+
+    //        // Neue RenderQueue-Werte setzen
+    //        for (int i = 0; i < renderers.Count; i++)
+    //        {
+    //            if (renderers[i] != null)
+    //            {
+    //                Material mat = renderers[i].material;
+    //                mat.renderQueue = baseQueue + i;
+    //            }
+    //        }
+
+    //        yield return new WaitForSeconds(0f);
+    //    }
+    //}
 }
