@@ -4,18 +4,39 @@
 TagManager:
   serializedVersion: 3
   tags:
-  - Anchor
-  - TeleportIgnore
-  - ExcludeTeleport
+  - QDSUISection
+  - QDSUIAccentColor
+  - QDSUISecondaryButton
+  - QDSUIPrimaryButton
+  - QDSUITextSecondaryInvertedColor
+  - QDSUITextInvertedColor
+  - QDSUIToggleButton
+  - QDSUIIcon
+  - QDSUITextSecondaryColor
+  - QDSUIDestructiveButton
+  - QDSUISharedThemeColor
+  - QDSUIBorderlessButton
+  - QDSUIToggleBorderlessButton
+  - QDSUIBackplateGradient
+  - QDSUITooltip
+  - QDSUIToggleSwitch
+  - PassThroughButton
+  - PassThrough
+  - Locomotion
+  - LocoButton
+  - LocoText
+  - QDSUITextInputField
+  - SamplesInfoPanel
+  - QDSUIToggleCheckboxRadio
   - Ground
   layers:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - NotReactingToGlobalLight
+  - Overlay UI
   - Water
   - UI
-  - 
+  - IgnoreLight
   - 
   - 
   - 
