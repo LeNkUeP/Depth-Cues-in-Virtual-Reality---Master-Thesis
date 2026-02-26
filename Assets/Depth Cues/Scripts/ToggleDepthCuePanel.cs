@@ -4,9 +4,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.Rendering.Universal;
+using UnityEngine.UI;
 
-public class DepthCuePanel : MonoBehaviour
+public class ToggleDepthCuePanel : MonoBehaviour
 {
 
     // ********************************************************************************************************
@@ -32,7 +32,46 @@ public class DepthCuePanel : MonoBehaviour
     public bool linearPerspectiveEnabled = true;
     public bool accretionEnabled = true;
 
+    [Header("Rating Sliders")]
+    public GameObject shadowCastRatingSlider;
+    public GameObject shapeFromShadingRatingSlider;
+    public GameObject occlusionRatingSlider;
+    public GameObject disparityRatingSlider;
+    public GameObject motionParallaxRatingSlider;
+    public GameObject atmosphericPerspectiveRatingSlider;
+    public GameObject relativeSizeRatingSlider;
+    public GameObject knownSizeRatingSlider;
+    public GameObject heightInFieldOfViewRatingSlider;
+    public GameObject accommodationRatingSlider;
+    public GameObject convergenceRatingSlider;
+    public GameObject imageBlurRatingSlider;
+    public GameObject textureGradientRatingSlider;
+    public GameObject linearPerspectiveRatingSlider;
+    public GameObject accretionRatingSlider;
+    private GameObject currentRatingSlider;
+
+    private bool shadowCastWasToggled = false;
+    private bool shapeFromShadingWasToggled = false;
+    private bool occlusionWasToggled = false;
+    private bool disparityWasToggled = false;
+    private bool motionParallaxWasToggled = false;
+    private bool atmosphericPerspectiveWasToggled = false;
+    private bool relativeSizeWasToggled = false;
+    private bool knownSizeWasToggled = false;
+    private bool heightInFieldOfViewWasToggled = false;
+    private bool accommodationWasToggled = false;
+    private bool convergenceWasToggled = false;
+    private bool imageBlurWasToggled = false;
+    private bool textureGradientWasToggled = false;
+    private bool linearPerspectiveWasToggled = false;
+    private bool accretionWasToggled = false;
+
     [Header("General")]
+    public GameObject sceneEnvironment;
+    public GameObject ratingPanel;
+    public GameObject openedEyesIconUI;
+    public GameObject closedEyesIconUI;
+    public GameObject nextButtonUI;
     private Camera cam;
     private Renderer[] allRenderers;
 
@@ -56,16 +95,12 @@ public class DepthCuePanel : MonoBehaviour
     public float aperture = 32;
     [Range(0, 1)]
     public float focusSpeed = 0.2f;
-    private GameObject volumeGameobject;
-    private Volume volume;
-    private VolumeProfile profile;
-    private DepthOfField depthOfField;
-    private RaycastHit hit;
-    private Coroutine dofCoroutine;
-    private float currentFocus;
 
     [Header("Convergence - Settings")]
-    // nothing
+    public GameObject[] objectsAffectedByConvergence;
+    public List<GameObject> blurClones = new List<GameObject>();
+    public float convergenceMaxDistance = .5f;
+    public Material blurMaterial;
 
     [Header("Image Blur - Settings")]
     // nothing
@@ -109,16 +144,95 @@ public class DepthCuePanel : MonoBehaviour
     public void Start()
     {
         // general
-        allRenderers = FindObjectsByType<Renderer>(FindObjectsSortMode.None);
+        allRenderers = sceneEnvironment.GetComponentsInChildren<Renderer>(true);
         cam = Camera.main;
 
         // motion parallax
         cameraRig = FindFirstObjectByType<OVRCameraRig>();
         locomotor = FindFirstObjectByType<FirstPersonLocomotor>();
 
-        // accommodation
-        //InitDof();
-        //StartCoroutine(UpdateDOFFocus());
+        // convergence
+        foreach (GameObject gb in objectsAffectedByConvergence)
+        {
+            CreateBlurClone(gb);
+        }
+    }
+
+    public void ToggleVisibility()
+    {
+        openedEyesIconUI.SetActive(!openedEyesIconUI.activeSelf);
+        closedEyesIconUI.SetActive(!closedEyesIconUI.activeSelf);
+        gameObject.SetActive(!gameObject.activeSelf);
+    }
+
+    public void UpdateRatingSlider(GameObject slider)
+    {
+        if (currentRatingSlider != slider)
+        {
+            // Disable current slider
+            if (currentRatingSlider != null)
+            {
+                currentRatingSlider.SetActive(false);
+            }
+            // Enable new slider
+            currentRatingSlider = slider;
+            currentRatingSlider.SetActive(true);
+        }
+    }
+
+    public void HideCurrentRatingSlider()
+    {
+        if (currentRatingSlider != null)
+        {
+            currentRatingSlider.SetActive(false);
+        }
+    }
+
+    public void ResetWasToggledState()
+    {
+        shadowCastWasToggled = false;
+        shapeFromShadingWasToggled = false;
+        occlusionWasToggled = false;
+        disparityWasToggled = false;
+        motionParallaxWasToggled = false;
+        atmosphericPerspectiveWasToggled = false;
+        relativeSizeWasToggled = false;
+        knownSizeWasToggled = false;
+        heightInFieldOfViewWasToggled = false;
+        accommodationWasToggled = false;
+        convergenceWasToggled = false;
+        imageBlurWasToggled = false;
+        textureGradientWasToggled = false;
+        linearPerspectiveWasToggled = false;
+        accretionWasToggled = false;
+    }
+
+    public bool CheckIfCompleted()
+    {
+        if (shadowCastWasToggled && shapeFromShadingWasToggled && occlusionWasToggled && disparityWasToggled &&
+            motionParallaxWasToggled && atmosphericPerspectiveWasToggled && relativeSizeWasToggled &&
+            knownSizeWasToggled && heightInFieldOfViewWasToggled && accommodationWasToggled && convergenceWasToggled &&
+            imageBlurWasToggled && textureGradientWasToggled && linearPerspectiveWasToggled && accretionWasToggled)
+        {
+            StartCoroutine(ShowUI(nextButtonUI));
+            return true;
+        }
+        return false;
+    }
+
+    private IEnumerator ShowUI(GameObject objectToShow)
+    {
+        objectToShow.SetActive(true);
+        objectToShow.GetComponent<Animator>().SetTrigger("show");
+        yield return null;
+    }
+
+    private void Update()
+    {
+        if (!convergenceEnabled)
+        {
+            UpdateBlurClones();
+        }
     }
 
     // ********************************************************************************************************
@@ -131,331 +245,17 @@ public class DepthCuePanel : MonoBehaviour
 
     // ********************************************************************************************************
     // ********************************************************************************************************
-    // ACCOMMODATION
-    // ********************************************************************************************************
-    // ********************************************************************************************************
-
-    public void ToggleAccommodation()
-    {
-        accommodationEnabled = !accommodationEnabled;
-
-        if (!accommodationEnabled)
-        {
-            if (dofCoroutine != null)
-            {
-                StopCoroutine(dofCoroutine);
-            }
-            volume.gameObject.SetActive(false);
-        }
-        else
-        {
-            volume.gameObject.SetActive(true);
-            
-            dofCoroutine = StartCoroutine(UpdateDOFFocus());
-        }
-
-        Debug.Log("Accommodation: " + (accommodationEnabled ? "ENABLED" : "DISABLED"));
-    }
-
-    private void InitDof()
-    {
-        volumeGameobject = new GameObject("DofVolume");
-        volumeGameobject.transform.parent = transform;
-
-        volume = volumeGameobject.AddComponent<Volume>();
-        volume.isGlobal = true;
-
-        profile = ScriptableObject.CreateInstance<VolumeProfile>();
-        depthOfField = profile.Add<DepthOfField>(true);
-
-        depthOfField.mode.overrideState = true;
-        depthOfField.mode.value = DepthOfFieldMode.Bokeh;
-
-        depthOfField.focalLength.overrideState = true;
-        depthOfField.focalLength.value = 300f;
-
-        depthOfField.aperture.overrideState = true;
-        depthOfField.aperture.value = 32f;
-
-        volume.profile = profile;
-    }
-
-    private IEnumerator UpdateDOFFocus()
-    {
-        //WaitForSeconds wait = new WaitForSeconds(0.05f); // 20x pro Sekunde
-
-        while (true)
-        {
-            float targetFocus = currentFocus;
-
-            if (Physics.Raycast(cam.transform.position, cam.transform.forward, out hit))
-            {
-                targetFocus = hit.distance;
-            }
-
-            currentFocus = Mathf.Lerp(currentFocus, targetFocus, focusSpeed);
-            depthOfField.focusDistance.value = currentFocus;
-
-            yield return null;
-        }
-    }
-
-    // ********************************************************************************************************
-    // ********************************************************************************************************
-    // HEIGHT IN FIELD OF VIEW
-    // ********************************************************************************************************
-    // ********************************************************************************************************
-
-    public void ToggleHeightInFieldOfView()
-    {
-        heightInFieldOfViewEnabled = !heightInFieldOfViewEnabled;
-
-        if (!heightInFieldOfViewEnabled)
-        {
-            foreach (GameObject heightInFieldOfViewObject in heightInFieldOfViewObjects)
-            {
-                heightInFieldOfViewObject.SetActive(false);
-            }
-        }
-        else
-        {
-            foreach (GameObject heightInFieldOfViewObject in heightInFieldOfViewObjects)
-            {
-                heightInFieldOfViewObject.SetActive(true);
-            }
-        }
-
-        Debug.Log("Height in Field of View: " + (heightInFieldOfViewEnabled ? "ENABLED" : "DISABLED"));
-    }
-
-    // ********************************************************************************************************
-    // ********************************************************************************************************
-    // KNOWN SIZE
-    // ********************************************************************************************************
-    // ********************************************************************************************************
-
-    public void ToggleKnownSize()
-    {
-        knownSizeEnabled = !knownSizeEnabled;
-
-        if (!knownSizeEnabled)
-        {
-            foreach (GameObject knowSizeObject in knownSizeObjects)
-            {
-                knowSizeObject.SetActive(false);
-            }
-        }
-        else
-        {
-            foreach (GameObject knowSizeObject in knownSizeObjects)
-            {
-                knowSizeObject.SetActive(true);
-            }
-        }
-
-        Debug.Log("Known Size: " + (knownSizeEnabled ? "ENABLED" : "DISABLED"));
-    }
-
-    // ********************************************************************************************************
-    // ********************************************************************************************************
-    // RELATIVE SIZE
-    // ********************************************************************************************************
-    // ********************************************************************************************************
-
-    public void ToggleRelativeSize()
-    {
-        relativeSizeEnabled = !relativeSizeEnabled;
-
-        if (!relativeSizeEnabled)
-        {
-            foreach (GameObject relSizeObject in relativeSizeObjects)
-            {
-                relSizeObject.SetActive(false);
-            }
-        }
-        else
-        {
-            foreach (GameObject relSizeObject in relativeSizeObjects)
-            {
-                relSizeObject.SetActive(true);
-            }
-        }
-
-        Debug.Log("Relative Size: " + (relativeSizeEnabled ? "ENABLED" : "DISABLED"));
-    }
-
-    // ********************************************************************************************************
-    // ********************************************************************************************************
-    // ATMOSPHERIC PERSPECTIVE
-    // ********************************************************************************************************
-    // ********************************************************************************************************
-
-    public void ToggleAtmosphericPerspective()
-    {
-        atmosphericPerspectiveEnabled = !atmosphericPerspectiveEnabled;
-
-        if (!atmosphericPerspectiveEnabled)
-        {
-            RenderSettings.fog = false;
-        }
-        else
-        {
-            RenderSettings.fogColor = fogColor;
-            RenderSettings.fogDensity = fogDensity;
-            RenderSettings.fog = true;
-        }
-
-        Debug.Log("Atmospheric Perspective: " + (atmosphericPerspectiveEnabled ? "ENABLED" : "DISABLED"));
-    }
-
-    // ********************************************************************************************************
-    // ********************************************************************************************************
-    // MOTION PARALLAX
-    // ********************************************************************************************************
-    // ********************************************************************************************************
-
-    public void ToggleMotionParallax()
-    {
-        motionParallaxEnabled = !motionParallaxEnabled;
-
-        if (!motionParallaxEnabled)
-        {
-            cameraRig.rotationOnlyTracking = true;
-            locomotor.DisableMovement();
-        }else
-        {
-            cameraRig.rotationOnlyTracking = false;
-            locomotor.EnableMovement();
-        }
-
-        Debug.Log("Motion Parallax: " + (motionParallaxEnabled ? "ENABLED" : "DISABLED"));
-    }
-
-    // ********************************************************************************************************
-    // ********************************************************************************************************
-    // DISPARITY
-    // ********************************************************************************************************
-    // ********************************************************************************************************
-
-    public void ToggleDisparity()
-    {
-        disparityEnabled = !disparityEnabled;
-
-        if (!disparityEnabled)
-        {
-            cameraLocalScale = cam.transform.localScale;
-            cam.transform.localScale = Vector3.zero;
-        }
-        else
-        {
-            cam.transform.localScale = cameraLocalScale;
-        }
-
-        Debug.Log("Disparity: " + (disparityEnabled ? "ENABLED" : "DISABLED"));
-    }
-
-    //void OnPreCull()
-    //{
-    //    if (disparityEnabled && cam != null && XRSettings.enabled)
-    //    {
-    //        Matrix4x4 leftView = cam.GetStereoViewMatrix(Camera.StereoscopicEye.Left);
-    //        Matrix4x4 leftProj = cam.GetStereoProjectionMatrix(Camera.StereoscopicEye.Left);
-
-    //        cam.SetStereoViewMatrix(Camera.StereoscopicEye.Right, leftView);
-    //        cam.SetStereoProjectionMatrix(Camera.StereoscopicEye.Right, leftProj);
-    //    }
-    //    else if (!disparityEnabled && cam != null)
-    //    {
-    //        cam.ResetStereoViewMatrices();
-    //        cam.ResetStereoProjectionMatrices();
-    //    }
-    //}
-
-    // ********************************************************************************************************
-    // ********************************************************************************************************
-    // SHADOW CAST
-    // ********************************************************************************************************
-    // ********************************************************************************************************
-
-    public void ToggleShadowCast()
-    {
-        shadowCastEnabled = !shadowCastEnabled;
-
-        foreach (Renderer rend in allRenderers)
-        {
-            rend.shadowCastingMode = shadowCastEnabled ? ShadowCastingMode.On : ShadowCastingMode.Off;
-            rend.receiveShadows = shadowCastEnabled;
-        }
-
-        Debug.Log("Shadow Cast " + (shadowCastEnabled ? "enabled" : "disabled"));
-    }
-
-    // ********************************************************************************************************
-    // ********************************************************************************************************
-    // SHAPE FROM SHADING
-    // ********************************************************************************************************
-    // ********************************************************************************************************
-
-    public void ToggleShapeFromShading()
-    {
-        shapeFromShadingEnabled = !shapeFromShadingEnabled;
-
-        foreach (Renderer rend in allRenderers)
-        {
-            if (rend.gameObject.CompareTag("Ground"))
-                continue;
-
-            if (shapeFromShadingEnabled)
-            {
-                // Ursprüngliche Materialien zurücksetzen
-                if (originalMaterials.ContainsKey(rend))
-                    rend.materials = originalMaterials[rend];
-            }
-            else
-            {
-                // Originalmaterialien merken
-                if (!originalMaterials.ContainsKey(rend))
-                    originalMaterials[rend] = rend.materials;
-
-                // Ersetze jedes Material durch Unlit-Version
-                Material[] mats = new Material[rend.materials.Length];
-                for (int i = 0; i < rend.materials.Length; i++)
-                {
-                    Material original = rend.materials[i];
-
-                    if (unlitCache.ContainsKey(original))
-                    {
-                        mats[i] = unlitCache[original];
-                    }
-                    else
-                    {
-                        Material unlit = new Material(Shader.Find("Custom/UnlitWithShadowReceiver"));
-
-                        if (original.HasProperty("_MainTex") && original.mainTexture != null)
-                            unlit.mainTexture = original.mainTexture;
-                        if (original.HasProperty("_Color"))
-                            unlit.color = original.color;
-
-                            mats[i] = unlit;
-                        unlitCache[original] = unlit;
-                    }
-                }
-                rend.materials = mats;
-            }
-        }
-
-        Debug.Log("Shape From Shading " + (shapeFromShadingEnabled ? "enabled (Lit)" : "disabled (Unlit)"));
-    }
-
-    // ********************************************************************************************************
-    // ********************************************************************************************************
     // OCCLUSION
     // ********************************************************************************************************
     // ********************************************************************************************************
 
     public void ToggleOcclusion()
     {
-        //occlusionEnabled = !occlusionEnabled;
+        occlusionWasToggled = true;
+        occlusionEnabled = !occlusionEnabled;
+
+        CheckIfCompleted();
+        UpdateRatingSlider(occlusionRatingSlider);
 
         //foreach (Renderer rend in allRenderers)
         //{
@@ -479,7 +279,7 @@ public class DepthCuePanel : MonoBehaviour
         //    }
         //}
 
-        //Debug.Log("Occlusion " + (occlusionEnabled ? "enabled" : "disabled"));
+        Debug.Log("Occlusion " + (occlusionEnabled ? "enabled" : "disabled"));
     }
 
     //public void ToggleOcclusion()
@@ -518,4 +318,511 @@ public class DepthCuePanel : MonoBehaviour
     //        yield return new WaitForSeconds(0f);
     //    }
     //}
+
+    // ********************************************************************************************************
+    // ********************************************************************************************************
+    // DISPARITY
+    // ********************************************************************************************************
+    // ********************************************************************************************************
+
+    public void ToggleDisparity()
+    {
+        disparityWasToggled = true;
+        disparityEnabled = !disparityEnabled;
+
+        CheckIfCompleted();
+        UpdateRatingSlider(disparityRatingSlider);
+
+        if (!disparityEnabled)
+        {
+            cameraLocalScale = cam.transform.localScale;
+            cam.transform.localScale = Vector3.zero;
+        }
+        else
+        {
+            cam.transform.localScale = cameraLocalScale;
+        }
+
+        Debug.Log("Disparity: " + (disparityEnabled ? "ENABLED" : "DISABLED"));
+    }
+
+    // ********************************************************************************************************
+    // ********************************************************************************************************
+    // CONVERGENCE
+    // ********************************************************************************************************
+    // ********************************************************************************************************
+
+    public void ToggleConvergence()
+    {
+        convergenceWasToggled = true;
+        convergenceEnabled = !convergenceEnabled;
+
+        CheckIfCompleted();
+        UpdateRatingSlider(convergenceRatingSlider);
+
+        if (!convergenceEnabled)
+        {
+            foreach (GameObject clone in blurClones)
+            {
+                clone.SetActive(true);
+            }
+        }
+        else
+        {
+            foreach (GameObject clone in blurClones)
+            {
+                clone.SetActive(false);
+            }
+        }
+
+        Debug.Log("Convergence: " + (convergenceEnabled ? "ENABLED" : "DISABLED"));
+    }
+
+    public void CreateBlurClone(GameObject originalObject)
+    {
+        if (blurMaterial == null)
+        {
+            Debug.LogError("BlurMaterial is null!");
+            return;
+        }
+
+        // Alle MeshRenderer inklusive inaktiver Objekte holen
+        MeshRenderer renderer = originalObject.GetComponentInChildren<MeshRenderer>();
+        MeshFilter originalFilter = originalObject.GetComponentInChildren<MeshFilter>();
+
+        if (originalFilter == null || originalFilter.sharedMesh == null)
+            return;
+
+        // ----- Neuen visuellen Klon erzeugen -----
+        GameObject clone = new GameObject(originalObject.name + "_BlurClone");
+
+        // Parent setzen (wichtig für parallele Bewegung)
+        clone.transform.SetParent(originalObject.transform, false);
+
+        // Lokale Transformwerte kopieren
+        clone.transform.localPosition = Vector3.zero;
+        clone.transform.localRotation = Quaternion.identity;
+        clone.transform.localScale = Vector3.one;
+
+        // Nur notwendige Komponenten hinzufügen
+        MeshFilter newFilter = clone.AddComponent<MeshFilter>();
+        MeshRenderer newRenderer = clone.AddComponent<MeshRenderer>();
+
+        // Mesh referenzieren (NICHT duplizieren → Speicher sparen)
+        newFilter.sharedMesh = originalFilter.sharedMesh;
+
+        // Blur-Material zuweisen
+        Material blurmaterial_clone = new Material(blurMaterial);
+        newRenderer.sharedMaterial = blurmaterial_clone;
+
+
+        // Optional: gleiche Shadow Settings übernehmen
+        //newRenderer.shadowCastingMode = originalRenderer.shadowCastingMode;
+        //newRenderer.receiveShadows = originalRenderer.receiveShadows;
+        newRenderer.shadowCastingMode = ShadowCastingMode.Off;
+        newRenderer.receiveShadows = false;
+
+        // Optional: Layer übernehmen (falls Blur Shader Layer nutzt)
+        //clone.layer = originalGO.layer;
+
+        blurClones.Add(clone);
+        clone.GetComponent<MeshRenderer>().enabled = false;
+    }
+
+    public void UpdateBlurClones()
+    {
+        foreach (GameObject clone in blurClones)
+        {
+            float distance = Vector3.Distance(Camera.main.transform.position, this.transform.position);
+            if (distance > convergenceMaxDistance)
+            {
+                clone.GetComponent<MeshRenderer>().enabled = false;
+            }
+            else
+            {
+                clone.GetComponent<MeshRenderer>().enabled = true;
+                float powerMin = 0f;
+                float powerMax = 0.007f;
+
+                // Normalisieren und auf Shaderbereich mappen
+                float normalized = Mathf.InverseLerp(convergenceMaxDistance, 0.2f, distance); // 2m -> 0, 0m -> 1
+                float power = Mathf.Lerp(powerMin, powerMax, normalized);
+
+                // Shader setzen
+                Renderer rend = clone.GetComponent<Renderer>();
+                if (rend != null)
+                {
+                    rend.material.SetFloat("_Power", power);
+                    Debug.Log(clone.name + " wird gesetzt auf " + power);
+                }
+            }
+        }
+    }
+
+    // ********************************************************************************************************
+    // ********************************************************************************************************
+    // ACCOMMODATION
+    // ********************************************************************************************************
+    // ********************************************************************************************************
+
+    public void ToggleAccommodation()
+    {
+        accommodationWasToggled = true;
+        accommodationEnabled = !accommodationEnabled;
+
+        CheckIfCompleted();
+        UpdateRatingSlider(accommodationRatingSlider);
+
+        if (!accommodationEnabled)
+        {
+
+        }
+        else
+        {
+
+        }
+
+        Debug.Log("Accommodation: " + (accommodationEnabled ? "ENABLED" : "DISABLED"));
+    }
+
+    // ********************************************************************************************************
+    // ********************************************************************************************************
+    // IMAGE BLUR
+    // ********************************************************************************************************
+    // ********************************************************************************************************
+
+    public void ToggleImageBlur()
+    {
+        imageBlurWasToggled = true;
+        imageBlurEnabled = !imageBlurEnabled;
+
+        CheckIfCompleted();
+        UpdateRatingSlider(imageBlurRatingSlider);
+
+        if (!imageBlurEnabled)
+        {
+
+        }
+        else
+        {
+
+        }
+
+        Debug.Log("Image Blur: " + (imageBlurEnabled ? "ENABLED" : "DISABLED"));
+    }
+
+    // ********************************************************************************************************
+    // ********************************************************************************************************
+    // LINEAR PERSPECTIVE
+    // ********************************************************************************************************
+    // ********************************************************************************************************
+
+    public void ToggleLinearPerspective()
+    {
+        linearPerspectiveWasToggled = true;
+        linearPerspectiveEnabled = !linearPerspectiveEnabled;
+
+        CheckIfCompleted();
+        UpdateRatingSlider(linearPerspectiveRatingSlider);
+
+        if (!linearPerspectiveEnabled)
+        {
+
+        }
+        else
+        {
+
+        }
+
+        Debug.Log("Linear perspektive: " + (linearPerspectiveEnabled ? "ENABLED" : "DISABLED"));
+    }
+
+    // ********************************************************************************************************
+    // ********************************************************************************************************
+    // TEXTURE GRADIENT
+    // ********************************************************************************************************
+    // ********************************************************************************************************
+
+    public void ToggleTextureGradient()
+    {
+        textureGradientWasToggled = true;
+        textureGradientEnabled = !textureGradientEnabled;
+
+        CheckIfCompleted();
+        UpdateRatingSlider(textureGradientRatingSlider);
+
+        if (!textureGradientEnabled)
+        {
+
+        }
+        else
+        {
+
+        }
+
+        Debug.Log("Texture gradient: " + (textureGradientEnabled ? "ENABLED" : "DISABLED"));
+    }
+
+    // ********************************************************************************************************
+    // ********************************************************************************************************
+    // RELATIVE SIZE
+    // ********************************************************************************************************
+    // ********************************************************************************************************
+
+    public void ToggleRelativeSize()
+    {
+        relativeSizeWasToggled = true;
+        relativeSizeEnabled = !relativeSizeEnabled;
+
+        CheckIfCompleted();
+        UpdateRatingSlider(relativeSizeRatingSlider);
+
+        if (!relativeSizeEnabled)
+        {
+            foreach (GameObject relSizeObject in relativeSizeObjects)
+            {
+                relSizeObject.SetActive(false);
+            }
+        }
+        else
+        {
+            foreach (GameObject relSizeObject in relativeSizeObjects)
+            {
+                relSizeObject.SetActive(true);
+            }
+        }
+
+        Debug.Log("Relative Size: " + (relativeSizeEnabled ? "ENABLED" : "DISABLED"));
+    }
+
+    // ********************************************************************************************************
+    // ********************************************************************************************************
+    // KNOWN SIZE
+    // ********************************************************************************************************
+    // ********************************************************************************************************
+
+    public void ToggleKnownSize()
+    {
+        knownSizeWasToggled = true;
+        knownSizeEnabled = !knownSizeEnabled;
+
+        CheckIfCompleted();
+        UpdateRatingSlider(knownSizeRatingSlider);
+
+        if (!knownSizeEnabled)
+        {
+            foreach (GameObject knowSizeObject in knownSizeObjects)
+            {
+                knowSizeObject.SetActive(false);
+            }
+        }
+        else
+        {
+            foreach (GameObject knowSizeObject in knownSizeObjects)
+            {
+                knowSizeObject.SetActive(true);
+            }
+        }
+
+        Debug.Log("Known Size: " + (knownSizeEnabled ? "ENABLED" : "DISABLED"));
+    }
+
+    // ********************************************************************************************************
+    // ********************************************************************************************************
+    // HEIGHT IN FIELD OF VIEW
+    // ********************************************************************************************************
+    // ********************************************************************************************************
+
+    public void ToggleHeightInFieldOfView()
+    {
+        heightInFieldOfViewWasToggled = true;
+        heightInFieldOfViewEnabled = !heightInFieldOfViewEnabled;
+
+        CheckIfCompleted();
+        UpdateRatingSlider(heightInFieldOfViewRatingSlider);
+
+        if (!heightInFieldOfViewEnabled)
+        {
+            foreach (GameObject heightInFieldOfViewObject in heightInFieldOfViewObjects)
+            {
+                heightInFieldOfViewObject.SetActive(false);
+            }
+        }
+        else
+        {
+            foreach (GameObject heightInFieldOfViewObject in heightInFieldOfViewObjects)
+            {
+                heightInFieldOfViewObject.SetActive(true);
+            }
+        }
+
+        Debug.Log("Height in Field of View: " + (heightInFieldOfViewEnabled ? "ENABLED" : "DISABLED"));
+    }
+
+    // ********************************************************************************************************
+    // ********************************************************************************************************
+    // ATMOSPHERIC PERSPECTIVE
+    // ********************************************************************************************************
+    // ********************************************************************************************************
+
+    public void ToggleAtmosphericPerspective()
+    {
+        atmosphericPerspectiveWasToggled = true;
+        atmosphericPerspectiveEnabled = !atmosphericPerspectiveEnabled;
+
+        CheckIfCompleted();
+        UpdateRatingSlider(atmosphericPerspectiveRatingSlider);
+
+        if (!atmosphericPerspectiveEnabled)
+        {
+            RenderSettings.fog = false;
+        }
+        else
+        {
+            RenderSettings.fogColor = fogColor;
+            RenderSettings.fogDensity = fogDensity;
+            RenderSettings.fog = true;
+        }
+
+        Debug.Log("Atmospheric Perspective: " + (atmosphericPerspectiveEnabled ? "ENABLED" : "DISABLED"));
+    }
+
+    // ********************************************************************************************************
+    // ********************************************************************************************************
+    // SHAPE FROM SHADING
+    // ********************************************************************************************************
+    // ********************************************************************************************************
+
+    public void ToggleShapeFromShading()
+    {
+        shapeFromShadingWasToggled = true;
+        shapeFromShadingEnabled = !shapeFromShadingEnabled;
+
+        CheckIfCompleted();
+        UpdateRatingSlider(shapeFromShadingRatingSlider);
+
+        foreach (Renderer rend in allRenderers)
+        {
+            if (rend.gameObject.CompareTag("Ground"))
+                continue;
+
+            if (shapeFromShadingEnabled)
+            {
+                // Ursprüngliche Materialien zurücksetzen
+                if (originalMaterials.ContainsKey(rend))
+                    rend.materials = originalMaterials[rend];
+            }
+            else
+            {
+                // Originalmaterialien merken
+                if (!originalMaterials.ContainsKey(rend))
+                    originalMaterials[rend] = rend.materials;
+
+                // Ersetze jedes Material durch Unlit-Version
+                Material[] mats = new Material[rend.materials.Length];
+                for (int i = 0; i < rend.materials.Length; i++)
+                {
+                    Material original = rend.materials[i];
+
+                    if (unlitCache.ContainsKey(original))
+                    {
+                        mats[i] = unlitCache[original];
+                    }
+                    else
+                    {
+                        Material unlit = new Material(Shader.Find("Custom/UnlitWithShadowReceiver"));
+
+                        if (original.HasProperty("_MainTex") && original.mainTexture != null)
+                            unlit.mainTexture = original.mainTexture;
+                        if (original.HasProperty("_Color"))
+                            unlit.color = original.color;
+                        if (original.HasProperty("Texture2D_E5864E9"))
+                            unlit.mainTexture = original.mainTexture;
+
+                        mats[i] = unlit;
+                        unlitCache[original] = unlit;
+                    }
+                }
+                rend.materials = mats;
+            }
+        }
+
+        Debug.Log("Shape From Shading " + (shapeFromShadingEnabled ? "enabled (Lit)" : "disabled (Unlit)"));
+    }
+
+    // ********************************************************************************************************
+    // ********************************************************************************************************
+    // SHADOW CAST
+    // ********************************************************************************************************
+    // ********************************************************************************************************
+
+    public void ToggleShadowCast()
+    {
+        shadowCastWasToggled = true;
+        shadowCastEnabled = !shadowCastEnabled;
+
+        CheckIfCompleted();
+        UpdateRatingSlider(shadowCastRatingSlider);
+
+        foreach (Renderer rend in allRenderers)
+        {
+            rend.shadowCastingMode = shadowCastEnabled ? ShadowCastingMode.On : ShadowCastingMode.Off;
+            rend.receiveShadows = shadowCastEnabled;
+        }
+
+        Debug.Log("Shadow Cast " + (shadowCastEnabled ? "enabled" : "disabled"));
+    }
+
+    // ********************************************************************************************************
+    // ********************************************************************************************************
+    // MOTION PARALLAX
+    // ********************************************************************************************************
+    // ********************************************************************************************************
+
+    public void ToggleMotionParallax()
+    {
+        motionParallaxWasToggled = true;
+        motionParallaxEnabled = !motionParallaxEnabled;
+
+        CheckIfCompleted();
+        UpdateRatingSlider(motionParallaxRatingSlider);
+
+        if (!motionParallaxEnabled)
+        {
+            cameraRig.rotationOnlyTracking = true;
+            locomotor.DisableMovement();
+        }else
+        {
+            cameraRig.rotationOnlyTracking = false;
+            locomotor.EnableMovement();
+        }
+
+        Debug.Log("Motion Parallax: " + (motionParallaxEnabled ? "ENABLED" : "DISABLED"));
+    }
+
+    // ********************************************************************************************************
+    // ********************************************************************************************************
+    // ACCRETION
+    // ********************************************************************************************************
+    // ********************************************************************************************************
+
+    public void ToggleAccretion()
+    {
+        accretionWasToggled = true;
+        accretionEnabled = !accretionEnabled;
+
+        CheckIfCompleted();
+        UpdateRatingSlider(accretionRatingSlider);
+
+        if (!accretionEnabled)
+        {
+
+        }
+        else
+        {
+
+        }
+
+        Debug.Log("Accretion: " + (accretionEnabled ? "ENABLED" : "DISABLED"));
+    }
 }

@@ -7,9 +7,26 @@ using UnityEngine.Video;
 
 public class DidacticDepthCuePanel : MonoBehaviour
 {
-    public GameObject didacticUI;
+    public GameObject textAndVideoUI;
     public TextMeshProUGUI currentCueHeading;
     public TextMeshProUGUI currentCueExplanation;
+    public GameObject nextButtonUI;
+
+    private bool shadowCastWasToggled = true;
+    private bool shapeFromShadingWasToggled = true;
+    private bool occlusionWasToggled = true;
+    private bool disparityWasToggled = true;
+    private bool motionParallaxWasToggled = true;
+    private bool atmosphericPerspectiveWasToggled = true;
+    private bool relativeSizeWasToggled = true;
+    private bool knownSizeWasToggled = true;
+    private bool heightInFieldOfViewWasToggled = true;
+    private bool accommodationWasToggled = true;
+    private bool convergenceWasToggled = true;
+    private bool imageBlurWasToggled = true;
+    private bool textureGradientWasToggled = true;
+    private bool linearPerspectiveWasToggled = true;
+    private bool accretionWasToggled = true;
 
     [Header("Binocular disparity - Settings")]
     public GameObject binocularDisparityVideo;
@@ -119,35 +136,18 @@ public class DidacticDepthCuePanel : MonoBehaviour
     private string heightInFieldOfViewExplanation = "Objekte, die näher am Horizont bzw. höher im Gesichtsfeld erscheinen, " +
         "werden als weiter entfernt interpretiert.";
 
-    private void Start()
+    public void UpdateDidacticUI(string heading, string explanation, GameObject video)
     {
-        occlusionVideo.GetComponentInChildren<VideoPlayer>().Prepare();
-        binocularDisparityVideo.GetComponentInChildren<VideoPlayer>().Prepare();
-        convergenceVideo.GetComponentInChildren<VideoPlayer>().Prepare();
-        motionParallaxVideo.GetComponentInChildren<VideoPlayer>().Prepare();
-        heightInFieldOfViewVideo.GetComponentInChildren<VideoPlayer>().Prepare();
-        knownSizeVideo.GetComponentInChildren<VideoPlayer>().Prepare();
-        relativeSizeVideo.GetComponentInChildren<VideoPlayer>().Prepare();
-        shapeFromShadingVideo.GetComponentInChildren<VideoPlayer>().Prepare();
-        shadowCastVideo.GetComponentInChildren<VideoPlayer>().Prepare();
-        atmosphericPerspectiveVideo.GetComponentInChildren<VideoPlayer>().Prepare();
-        linearPerspectiveVideo.GetComponentInChildren<VideoPlayer>().Prepare();
-        textureGradientVideo.GetComponentInChildren<VideoPlayer>().Prepare();
-        accretionVideo.GetComponentInChildren<VideoPlayer>().Prepare();
-        imageBlurVideo.GetComponentInChildren<VideoPlayer>().Prepare();
-        accommodationVideo.GetComponentInChildren<VideoPlayer>().Prepare();
-    }
+        CheckIfCompleted();
 
-    public void updateDidacticUI(String heading, String explanation, GameObject video)
-    {
-        if (!didacticUI.GetComponent<Canvas>().enabled)
+        if (!textAndVideoUI.GetComponent<Canvas>().enabled)
         {
             currentCueHeading.text = heading;
             currentCueExplanation.text = explanation;
             video.GetComponentInChildren<VideoPlayer>().time = 0;
             video.GetComponentInChildren<VideoPlayer>().Play();
             video.GetComponent<RectTransform>().localScale = Vector3.one;
-            didacticUI.GetComponent<Canvas>().enabled = true;
+            ShowTextAndVideoUI();
         }
         else
         {
@@ -157,9 +157,39 @@ public class DidacticDepthCuePanel : MonoBehaviour
             video.GetComponentInChildren<VideoPlayer>().Stop();
             video.GetComponentInChildren<VideoPlayer>().Prepare();
             video.GetComponent<RectTransform>().localScale = Vector3.zero;
-            didacticUI.GetComponent<Canvas>().enabled = false;
+            HideTextAndVideoUI();
         }
 
+    }
+
+    public void HideTextAndVideoUI()
+    {
+        textAndVideoUI.GetComponent<Canvas>().enabled = false;
+    }
+
+    public void ShowTextAndVideoUI()
+    {
+        textAndVideoUI.GetComponent<Canvas>().enabled = true;
+    }
+
+    public bool CheckIfCompleted()
+    {
+        if (shadowCastWasToggled && shapeFromShadingWasToggled && occlusionWasToggled && disparityWasToggled &&
+            motionParallaxWasToggled && atmosphericPerspectiveWasToggled && relativeSizeWasToggled &&
+            knownSizeWasToggled && heightInFieldOfViewWasToggled && accommodationWasToggled && convergenceWasToggled &&
+            imageBlurWasToggled && textureGradientWasToggled && linearPerspectiveWasToggled && accretionWasToggled)
+        {
+            StartCoroutine(ShowUI(nextButtonUI));
+            return true;
+        }
+        return false;
+    }
+
+    private IEnumerator ShowUI(GameObject objectToShow)
+    {
+        objectToShow.SetActive(true);
+        objectToShow.GetComponent<Animator>().SetTrigger("show");
+        yield return null;
     }
 
     // ********************************************************************************************************
@@ -170,7 +200,8 @@ public class DidacticDepthCuePanel : MonoBehaviour
 
     public void ToggleAccommodation()
     {
-        updateDidacticUI(accommodationHeading, accommodationExplanation, accommodationVideo);
+        accommodationWasToggled = true;
+        UpdateDidacticUI(accommodationHeading, accommodationExplanation, accommodationVideo);
     }
 
     // ********************************************************************************************************
@@ -181,7 +212,8 @@ public class DidacticDepthCuePanel : MonoBehaviour
 
     public void ToggleImageBlur()
     {
-        updateDidacticUI(imageBlurHeading, imageBlurExplanation, imageBlurVideo);
+        imageBlurWasToggled = true;
+        UpdateDidacticUI(imageBlurHeading, imageBlurExplanation, imageBlurVideo);
     }
 
     // ********************************************************************************************************
@@ -192,7 +224,8 @@ public class DidacticDepthCuePanel : MonoBehaviour
 
     public void ToggleHeightInFieldOfView()
     {
-        updateDidacticUI(heightInFieldOfViewHeading, heightInFieldOfViewExplanation, heightInFieldOfViewVideo);
+        heightInFieldOfViewWasToggled = true;
+        UpdateDidacticUI(heightInFieldOfViewHeading, heightInFieldOfViewExplanation, heightInFieldOfViewVideo);
     }
 
     // ********************************************************************************************************
@@ -203,7 +236,8 @@ public class DidacticDepthCuePanel : MonoBehaviour
 
     public void ToggleKnownSize()
     {
-        updateDidacticUI(knownSizeHeading, knownSizeExplanation, knownSizeVideo);
+        knownSizeWasToggled = true;
+        UpdateDidacticUI(knownSizeHeading, knownSizeExplanation, knownSizeVideo);
     }
 
     // ********************************************************************************************************
@@ -214,7 +248,8 @@ public class DidacticDepthCuePanel : MonoBehaviour
 
     public void ToggleRelativeSize()
     {
-        updateDidacticUI(relativeSizeHeading, relativeSizeExplanation, relativeSizeVideo);
+        relativeSizeWasToggled = true;
+        UpdateDidacticUI(relativeSizeHeading, relativeSizeExplanation, relativeSizeVideo);
     }
 
     // ********************************************************************************************************
@@ -225,7 +260,8 @@ public class DidacticDepthCuePanel : MonoBehaviour
 
     public void ToggleAtmosphericPerspective()
     {
-        updateDidacticUI(atmosphericPerspectiveHeading, atmosphericPerspectiveExplanation, atmosphericPerspectiveVideo);
+        atmosphericPerspectiveWasToggled = true;
+        UpdateDidacticUI(atmosphericPerspectiveHeading, atmosphericPerspectiveExplanation, atmosphericPerspectiveVideo);
     }
 
     // ********************************************************************************************************
@@ -236,7 +272,8 @@ public class DidacticDepthCuePanel : MonoBehaviour
 
     public void ToggleMotionParallax()
     {
-        updateDidacticUI(motionParallaxHeading, motionParallaxExplanation, motionParallaxVideo);
+        motionParallaxWasToggled = true;
+        UpdateDidacticUI(motionParallaxHeading, motionParallaxExplanation, motionParallaxVideo);
     }
 
     // ********************************************************************************************************
@@ -247,7 +284,8 @@ public class DidacticDepthCuePanel : MonoBehaviour
 
     public void ToggleDisparity()
     {
-        updateDidacticUI(binocularDisparityHeading, binocularDisparityExplanation, binocularDisparityVideo);
+        disparityWasToggled = true;
+        UpdateDidacticUI(binocularDisparityHeading, binocularDisparityExplanation, binocularDisparityVideo);
     }
 
     // ********************************************************************************************************
@@ -258,7 +296,8 @@ public class DidacticDepthCuePanel : MonoBehaviour
 
     public void ToggleConvergence()
     {
-        updateDidacticUI(convergenceHeading, convergenceExplanation, convergenceVideo);
+        convergenceWasToggled = true;
+        UpdateDidacticUI(convergenceHeading, convergenceExplanation, convergenceVideo);
     }
 
     // ********************************************************************************************************
@@ -269,7 +308,8 @@ public class DidacticDepthCuePanel : MonoBehaviour
 
     public void ToggleOcclusion()
     {
-        updateDidacticUI(occlusionHeading, occlusionExplanation, occlusionVideo);
+        occlusionWasToggled = true;
+        UpdateDidacticUI(occlusionHeading, occlusionExplanation, occlusionVideo);
     }
 
     // ********************************************************************************************************
@@ -280,7 +320,8 @@ public class DidacticDepthCuePanel : MonoBehaviour
 
     public void ToggleShadowCast()
     {
-        updateDidacticUI(shadowCastHeading, shadowCastExplanation, shadowCastVideo);
+        shadowCastWasToggled = true;
+        UpdateDidacticUI(shadowCastHeading, shadowCastExplanation, shadowCastVideo);
     }
 
     // ********************************************************************************************************
@@ -291,7 +332,8 @@ public class DidacticDepthCuePanel : MonoBehaviour
 
     public void ToggleShapeFromShading()
     {
-        updateDidacticUI(shapeFromShadingHeading, shapeFromShadingExplanation, shapeFromShadingVideo);
+        shapeFromShadingWasToggled = true;
+        UpdateDidacticUI(shapeFromShadingHeading, shapeFromShadingExplanation, shapeFromShadingVideo);
     }
 
     // ********************************************************************************************************
@@ -302,7 +344,8 @@ public class DidacticDepthCuePanel : MonoBehaviour
 
     public void ToggleLinearPerspective()
     {
-        updateDidacticUI(linearPerspectiveHeading, linearPerspectiveExplanation, linearPerspectiveVideo);
+        linearPerspectiveWasToggled = true;
+        UpdateDidacticUI(linearPerspectiveHeading, linearPerspectiveExplanation, linearPerspectiveVideo);
     }
 
     // ********************************************************************************************************
@@ -313,7 +356,8 @@ public class DidacticDepthCuePanel : MonoBehaviour
 
     public void ToggleTextureGradient()
     {
-        updateDidacticUI(textureGradientHeading, textureGradientExplanation, textureGradientVideo);
+        textureGradientWasToggled = true;
+        UpdateDidacticUI(textureGradientHeading, textureGradientExplanation, textureGradientVideo);
     }
 
     // ********************************************************************************************************
@@ -324,6 +368,7 @@ public class DidacticDepthCuePanel : MonoBehaviour
 
     public void ToggleAccretion()
     {
-        updateDidacticUI(accretionHeading, accretionExplanation, accretionVideo);
+        accretionWasToggled = true;
+        UpdateDidacticUI(accretionHeading, accretionExplanation, accretionVideo);
     }
 }
