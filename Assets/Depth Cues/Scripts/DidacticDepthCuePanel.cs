@@ -179,7 +179,10 @@ public class DidacticDepthCuePanel : MonoBehaviour
             knownSizeWasToggled && heightInFieldOfViewWasToggled && accommodationWasToggled && convergenceWasToggled &&
             imageBlurWasToggled && textureGradientWasToggled && linearPerspectiveWasToggled && accretionWasToggled)
         {
-            StartCoroutine(ShowUI(nextButtonUI));
+            if (!nextButtonUI.activeSelf)
+            {
+                StartCoroutine(ShowUI(nextButtonUI));
+            }
             return true;
         }
         return false;

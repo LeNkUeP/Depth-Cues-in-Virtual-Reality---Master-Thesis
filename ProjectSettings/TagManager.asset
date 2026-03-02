@@ -29,6 +29,9 @@ TagManager:
   - SamplesInfoPanel
   - QDSUIToggleCheckboxRadio
   - Ground
+  - car
+  - ShadowClone
+  - BlurClone
   layers:
   - Default
   - TransparentFX
@@ -40,7 +43,7 @@ TagManager:
   - Ignore Player
   - Player
   - blur_layer
-  - 
+  - onTop
   - 
   - 
   - 

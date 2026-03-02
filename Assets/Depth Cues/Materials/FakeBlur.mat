@@ -129,7 +129,7 @@ Material:
     - _Metallic: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.005
-    - _Power: 0.007
+    - _Power: 0.00517
     - _QueueControl: 0
     - _QueueOffset: 0
     - _Radius: 0.067

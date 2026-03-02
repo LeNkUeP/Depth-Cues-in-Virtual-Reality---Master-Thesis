@@ -1,100 +1,113 @@
-﻿using System.Collections;
+﻿using Oculus.Interaction.Samples;
+using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UIElements;
 
 public class EnvironmentAnimationController : MonoBehaviour
 {
-    [Header("Referenzen")]
-    public Transform ground; // Boden Referenz
+    [Header("General")]
+    public Transform ground;
 
-    [Header("Zeit Einstellungen")]
-    public float minDuration = 0.5f;
-    public float maxDuration = 2f;
+    [Header("Duration")]
+    public float minDuration = 1.5f;
+    public float maxDuration = 3f;
 
-    [Header("Start Verzögerung")]
+    [Header("Delay")]
     public float minDelay = 0f;
-    public float maxDelay = 1.5f;
+    public float maxDelay = 0.5f;
 
-    [Header("Bewegungs Multiplikator (abhängig von Collider Höhe)")]
-    public float minHeightMultiplier = 1.0f;
-    public float maxHeightMultiplier = 2.0f;
+    [Header("Distance multiplier")]
+    public float minHeightMultiplier = 1.5f;
+    public float maxHeightMultiplier = 1.6f;
 
-    // 🔹 Speichert ursprüngliche Scales
-    private Dictionary<Transform, Vector3> originalScales = new Dictionary<Transform, Vector3>();
-    private void Awake()
+    public void DisableAllObjects(GameObject sceneEnvironment)
     {
-        // Original-Scale aller direkten Children speichern
-        foreach (Transform child in transform)
+        foreach (Transform sceneObject in sceneEnvironment.transform)
         {
-            originalScales[child] = child.localScale;
+            sceneObject.gameObject.SetActive(false);
+
+            if (sceneObject.GetComponentInChildren<Rigidbody>() != null)
+                sceneObject.GetComponentInChildren<Rigidbody>().isKinematic = true;
+            if (sceneObject.GetComponentInChildren<RespawnOnDrop>() != null)
+                sceneObject.GetComponentInChildren<RespawnOnDrop>().enabled = false;
         }
     }
 
-    private void Start()
+    public void DisableAllObjects(GameObject[] sceneEnvironment)
     {
-        DisableAllChildren();
-    }
-
-    public void DisableAllChildren()
-    {
-        foreach (Transform child in transform)
+        foreach (GameObject sceneObject in sceneEnvironment)
         {
-            child.gameObject.SetActive(false);
+            sceneObject.gameObject.SetActive(false);
+
+            if (sceneObject.GetComponentInChildren<Rigidbody>() != null)
+                sceneObject.GetComponentInChildren<Rigidbody>().isKinematic = true;
+            if (sceneObject.GetComponentInChildren<RespawnOnDrop>() != null)
+                sceneObject.GetComponentInChildren<RespawnOnDrop>().enabled = false;
         }
     }
 
-    public void EnableAllChildren()
+    public void EnableAllObjects(GameObject sceneEnvironment)
     {
-        foreach (Transform child in transform)
+        foreach (Transform sceneObject in sceneEnvironment.transform)
         {
-            child.gameObject.SetActive(true);
+            sceneObject.gameObject.SetActive(true);
         }
     }
 
-    public void AnimateShowChildren()
+    public void AnimateShowObjects(GameObject sceneEnvironment)
     {
-        foreach (Transform child in transform)
+        foreach (Transform sceneObject in sceneEnvironment.transform)
         {
-            StartCoroutine(AnimateChild(child));
+            StartCoroutine(AnimateShowObject(sceneObject));
         }
     }
 
-    private IEnumerator AnimateChild(Transform child)
+    public void AnimateShowObjects(GameObject[] sceneEnvironment)
     {
-        Collider col = child.GetComponent<Collider>();
-        if (col == null)
+        foreach (GameObject sceneObject in sceneEnvironment)
         {
-            Debug.LogWarning(child.name + " hat keinen Collider!");
-            yield break;
+            StartCoroutine(AnimateShowObject(sceneObject.transform));
         }
+    }
+
+    private IEnumerator AnimateShowObject(Transform sceneObject)
+    {
+        Renderer renderer = sceneObject.GetComponent<Renderer>();
 
         float delay = Random.Range(minDelay, maxDelay);
         yield return new WaitForSeconds(delay);
 
         float duration = Random.Range(minDuration, maxDuration);
 
-        float objectHeight = col.bounds.size.y;
+        // if no height is measurable, use default height, animation may look weird but is working
+        float objectHeight = 5f;
+        if (renderer != null)
+        {
+            objectHeight = renderer.bounds.size.y;
+        }
 
-        // 🔹 Ursprüngliche Zielposition merken
-        Vector3 targetPosition = child.position;
-
-        // 🔹 Zufällige Strecke abhängig von Höhe
-        float heightMultiplier = Random.Range(minHeightMultiplier, maxHeightMultiplier);
-        float travelDistance = objectHeight * heightMultiplier;
+        // save target position
+        Vector3 targetPosition = sceneObject.position;
 
         float groundY = ground.position.y;
 
-        // 🔹 Startposition unter dem Boden
-        Vector3 startPosition = new Vector3(
+        // random distance, minimal = objectheight + y-coord, scale with multipliers 
+        float heightMultiplier = Random.Range(minHeightMultiplier, maxHeightMultiplier);
+        float travelDistance = objectHeight * heightMultiplier + Mathf.Abs(groundY-targetPosition.y);
+
+
+        // animate from this hidden position (under ground)
+        Vector3 startFromPosition = new Vector3(
             targetPosition.x,
             groundY - travelDistance,
             targetPosition.z
         );
 
-        // Objekt nach unten setzen
-        child.position = startPosition;
-        child.gameObject.SetActive(true);
+        // move object under ground
+        sceneObject.position = startFromPosition;
+        sceneObject.gameObject.SetActive(true);
 
         float elapsed = 0f;
 
@@ -105,46 +118,80 @@ public class EnvironmentAnimationController : MonoBehaviour
 
             t = Mathf.SmoothStep(0, 1, t);
 
-            child.position = Vector3.Lerp(startPosition, targetPosition, t);
+            sceneObject.position = Vector3.Lerp(startFromPosition, targetPosition, t);
             yield return null;
         }
 
-        child.position = targetPosition;
+        // reset important physic components
+        sceneObject.position = targetPosition;
+        if (sceneObject.GetComponentInChildren<Rigidbody>() != null)
+            sceneObject.GetComponentInChildren<Rigidbody>().isKinematic = false;
+
+        if (sceneObject.GetComponentInChildren<RespawnOnDrop>() != null)
+            sceneObject.GetComponentInChildren<RespawnOnDrop>().enabled = true;
     }
 
-    public void AnimateShowChildrenScale()
+    public void AnimateHideObjects(GameObject sceneEnvironment)
     {
-        foreach (Transform child in transform)
+        foreach (Transform sceneObject in sceneEnvironment.transform)
         {
-            StartCoroutine(AnimateChildScale(child));
+            StartCoroutine(AnimateHideObject(sceneObject));
         }
     }
 
-    private IEnumerator AnimateChildScale(Transform child)
+    public void AnimateHideObjects(GameObject[] sceneEnvironment)
     {
-        if (!originalScales.ContainsKey(child))
-            yield break;
+        foreach (GameObject sceneObject in sceneEnvironment)
+        {
+            StartCoroutine(AnimateHideObject(sceneObject.transform));
+        }
+    }
+
+    private IEnumerator AnimateHideObject(Transform sceneObject)
+    {
+        Renderer renderer = sceneObject.GetComponent<Renderer>();
 
         float delay = Random.Range(minDelay, maxDelay);
         yield return new WaitForSeconds(delay);
 
         float duration = Random.Range(minDuration, maxDuration);
 
-        Vector3 targetScale = originalScales[child];
+        // if no height is measurable, use default height, animation may look weird but is working
+        float objectHeight = 5f;
+        if (renderer != null)
+        {
+            objectHeight = renderer.bounds.size.y;
+        }
 
-        child.localScale = Vector3.zero;
-        child.gameObject.SetActive(true);
+        // save target position
+        Vector3 startFromPosition = sceneObject.position;
+
+        float groundY = ground.position.y;
+
+        // random distance, minimal = objectheight + y-coord, scale with multipliers 
+        float heightMultiplier = Random.Range(minHeightMultiplier, maxHeightMultiplier);
+        float travelDistance = objectHeight * heightMultiplier + Mathf.Abs(groundY - startFromPosition.y);
+
+        // animate from this hidden position (under ground)
+        Vector3 targetPosition = new Vector3(
+            startFromPosition.x,
+            groundY - travelDistance,
+            startFromPosition.z
+        );
 
         float elapsed = 0f;
 
         while (elapsed < duration)
         {
             elapsed += Time.deltaTime;
-            float t = Mathf.SmoothStep(0, 1, elapsed / duration);
-            child.localScale = Vector3.Lerp(Vector3.zero, targetScale, t);
+            float t = elapsed / duration;
+
+            t = Mathf.SmoothStep(0, 1, t);
+
+            sceneObject.position = Vector3.Lerp(startFromPosition, targetPosition, t);
             yield return null;
         }
 
-        child.localScale = targetScale;
+        sceneObject.gameObject.SetActive(false);
     }
 }

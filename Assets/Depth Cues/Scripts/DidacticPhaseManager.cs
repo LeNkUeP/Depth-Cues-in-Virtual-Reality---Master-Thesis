@@ -5,6 +5,7 @@ using UnityEngine;
 
 public class DidacticPhaseManager: MonoBehaviour
 {
+    [Header("UI Elements")]
     public GameObject startButtonUI;
     public GameObject welcomeUI;
     public GameObject nextButtonUI;
@@ -18,42 +19,54 @@ public class DidacticPhaseManager: MonoBehaviour
     public GameObject toggleDepthCueUI;
     public GameObject hideButtonUI;
     public GameObject phase3IntroUI;
+
+    [Header("Managers & Controllers")]
     public EnvironmentAnimationController environmentAnimationController;
+    public StudyDataManager studyDataManager;
+
+    [Header("Scene Objects")]
+    public GameObject phase2Environment;
+    public GameObject[] phase2EnvironmentObjects;
 
     private Vector3 toggleMenuStarterPosition;
-    private Renderer[] allRenderers;
-    private OVRManager ovrManager;
 
     private void Start()
     {
+        DisableAllUI();
+        //environmentAnimationController.DisableAllObjects(phase2Environment);
+
         PreGameInitializations();
 
-        DisableAllUI();
+        // first only start button should be visible to start prototype
         startButtonUI.SetActive(true);
         startButtonUI.GetComponent<Animator>().SetTrigger("pulse");
     }
 
     private void DisableAllUI()
     {
+        startButtonUI.SetActive(false);
         welcomeUI.SetActive(false);
         nextButtonUI.SetActive(false);
         explanationDepthCuesUI.SetActive(false);
         explanationBinoAndMonoUI.SetActive(false);
         explanationDidacticPartUI.SetActive(false);
-        //toggleDepthCueUI.SetActive(false);
-    }
+        phase1IntroUI.SetActive(false);
+        didacticUI.SetActive(false);
+        phase2IntroUI.SetActive(false);
+        additionalRatingTaskUI.SetActive(false);
+        toggleDepthCueUI.SetActive(false);
+        hideButtonUI.SetActive(false);
+        phase3IntroUI.SetActive(false);
+}
 
     private void PreGameInitializations()
     {
-        //ovrManager = FindFirstObjectByType<OVRManager>();
-        //ovrManager.headPoseRelativeOffsetTranslation = new Vector3(0,0.5f,0);
-
-        //allRenderers = FindObjectsByType<Renderer>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-        //toggleDepthCueUI.GetComponent<ToggleDepthCuePanel>().CreateBlurClonesForAffectedObjects();
-
+        // Must be active to complete initialization process, hide by translating far away 
         toggleDepthCueUI.SetActive(true);
         toggleMenuStarterPosition = toggleDepthCueUI.transform.position;
         toggleDepthCueUI.transform.position = Vector3.one * 1000;
+
+        // Prevents lag/initialization in moment of usage
         toggleDepthCueUI.GetComponent<ToggleDepthCuePanel>().ToggleAtmosphericPerspective();
         toggleDepthCueUI.GetComponent<ToggleDepthCuePanel>().ToggleAtmosphericPerspective();
         //toggleDepthCueUI.GetComponent<ToggleDepthCuePanel>().ToggleShapeFromShading();
@@ -64,6 +77,7 @@ public class DidacticPhaseManager: MonoBehaviour
         didacticUI.GetComponent<PokeInteractable>().enabled = false;
         didacticUI.GetComponentInChildren<Canvas>().enabled = false;
 
+        // Toggle depth cue panel slider should be invisible when no cue was selected
         toggleDepthCueUI.GetComponent<ToggleDepthCuePanel>().HideCurrentRatingSlider();
         toggleDepthCueUI.GetComponent<ToggleDepthCuePanel>().ResetWasToggledState();
     }
@@ -71,17 +85,6 @@ public class DidacticPhaseManager: MonoBehaviour
     private void ShowKeyboard()
     {
         //TouchScreenKeyboard overlayKeyboard = TouchScreenKeyboard.Open("", TouchScreenKeyboardType.Default);
-    }
-
-    private IEnumerator StartPrototype()
-    {
-        startButtonUI.GetComponent<Animator>().SetTrigger("hide");
-        yield return new WaitForSeconds(.5f);
-        startButtonUI.SetActive(false);
-        welcomeUI.SetActive(true);
-        welcomeUI.GetComponent<Animator>().SetTrigger("show");
-        nextButtonUI.SetActive(true);
-        nextButtonUI.GetComponent<Animator>().SetTrigger("show");
     }
 
     private IEnumerator SwitchUI(GameObject old, GameObject next)
@@ -116,11 +119,13 @@ public class DidacticPhaseManager: MonoBehaviour
 
     public void StartInitialPhase()
     {
-        StartCoroutine(StartPrototype());
+        StartCoroutine(SwitchUI(startButtonUI, welcomeUI));
+        StartCoroutine(DelayedShowUI(nextButtonUI));
     }
 
     public void Next()
     {
+        // PHASE 1: DIDACTIC
         if (welcomeUI.activeSelf)
         {
             StartCoroutine(SwitchUI(welcomeUI, explanationDepthCuesUI));
@@ -146,6 +151,7 @@ public class DidacticPhaseManager: MonoBehaviour
             StartCoroutine(HideUI(nextButtonUI));
             StartCoroutine(SwitchUI(phase1IntroUI, didacticUI));
         }
+        //PHASE 2: DEPTH CUE EFFECTS
         else if (didacticUI.activeSelf)
         {
             didacticUI.GetComponent<DidacticDepthCuePanel>().HideTextAndVideoUI();
@@ -158,17 +164,32 @@ public class DidacticPhaseManager: MonoBehaviour
         }
         else if (additionalRatingTaskUI.activeSelf)
         {
+            // reset depth cue panels position and proceed with normal show animation
             toggleDepthCueUI.SetActive(false);
             toggleDepthCueUI.transform.position = toggleMenuStarterPosition;
+
             StartCoroutine(HideUI(nextButtonUI));
             StartCoroutine(SwitchUI(additionalRatingTaskUI, toggleDepthCueUI));
             StartCoroutine(DelayedShowUI(hideButtonUI));
-            environmentAnimationController.EnableAllChildren();
+
+            // show scene objects
+            environmentAnimationController.AnimateShowObjects(phase2EnvironmentObjects);
         }
+        // PHASE 3: EXPLORATIVE TASKS
         else if (toggleDepthCueUI.activeSelf)
         {
+            // Unnatural depth cues need to be resetted/deactivated
+            toggleDepthCueUI.GetComponent<ToggleDepthCuePanel>().RestoreNormalView();
+
+            environmentAnimationController.AnimateHideObjects(phase2EnvironmentObjects);
             StartCoroutine(HideUI(hideButtonUI));
             StartCoroutine(SwitchUI(toggleDepthCueUI, phase3IntroUI));
         }
+        else if (phase3IntroUI.activeSelf)
+        {
+            //studyDataManager.SaveCSV();
+            //Debug.Log("LENKUEP" + Application.persistentDataPath);
+        }
+
     }
 }

@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.UI;
@@ -83,10 +84,13 @@ public class ToggleDepthCuePanel : MonoBehaviour
     private FirstPersonLocomotor locomotor;
 
     [Header("Accretion - Settings")]
-    // nothing
+    public CarSpawner[] accretionObjects;
 
     [Header("Occlusion - Settings")]
-    // nothing
+    public Material occlusionMaterialLit;
+    public Material occlusionMaterialUnlit;
+    [Range(0, 1)]
+    public float occlusionAlpha = 1.0f;
 
     [Header("Accommodation - Settings")]
     [Range(1, 300)]
@@ -97,10 +101,9 @@ public class ToggleDepthCuePanel : MonoBehaviour
     public float focusSpeed = 0.2f;
 
     [Header("Convergence - Settings")]
-    public GameObject[] objectsAffectedByConvergence;
-    public List<GameObject> blurClones = new List<GameObject>();
-    public float convergenceMaxDistance = .5f;
     public Material blurMaterial;
+    public float convergenceMaxDistance = .5f;
+    private List<GameObject> blurClones = new List<GameObject>();
 
     [Header("Image Blur - Settings")]
     // nothing
@@ -118,10 +121,10 @@ public class ToggleDepthCuePanel : MonoBehaviour
     // nothing
 
     [Header("Shadow cast - Settings")]
-    // nothing
+    private List<GameObject> shadowClones = new List<GameObject>();
 
     [Header("Shape from shading - Settings")]
-    private Dictionary<Renderer, Material[]> originalMaterials = new Dictionary<Renderer, Material[]>();
+    private Dictionary<Renderer, Material> originalMaterials = new Dictionary<Renderer, Material>();
     private Dictionary<Material, Material> unlitCache = new Dictionary<Material, Material>();
 
     [Header("Relative size - Settings")]
@@ -133,7 +136,18 @@ public class ToggleDepthCuePanel : MonoBehaviour
     [Header("Height in field of view - Settings")]
     public GameObject[] heightInFieldOfViewObjects;
 
+    [Header("References")]
+    public Transform rayOrigin;        // Controller oder Kamera Transform, von dem der Raycast startet
+    public Material sphereMaterial;    // Material für die Sphere
 
+    [Header("Settings")]
+    public float zScale = 0.1f;        // Fixe Z-Skalierung
+    public float scaleFactor = 0.1f;   // Distanz -> X/Y Skalierung
+    public float rayDistance = 100f;
+    public LayerMask raycastLayerMask;
+    public float rayDownAngle = 0f;
+
+    private GameObject markerSphere;
 
     // ********************************************************************************************************
     // ********************************************************************************************************
@@ -151,18 +165,88 @@ public class ToggleDepthCuePanel : MonoBehaviour
         cameraRig = FindFirstObjectByType<OVRCameraRig>();
         locomotor = FindFirstObjectByType<FirstPersonLocomotor>();
 
-        // convergence
-        foreach (GameObject gb in objectsAffectedByConvergence)
+        // create object clones for different depth cues
+        foreach (Renderer rend in allRenderers)
         {
-            CreateBlurClone(gb);
+            CreateNoShapeFromShadingMaterial(rend);
+            CreateBlurClone(rend.gameObject);
+            CreateShadowClone(rend.gameObject);
         }
+
+        // Einmalige Sphere erstellen
+        //markerSphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        //markerSphere.GetComponent<Collider>().enabled = false; // Collider deaktivieren
+        //markerSphere.transform.localScale = new Vector3(1, 1, zScale);
+
+        //if (sphereMaterial != null)
+            //markerSphere.GetComponent<Renderer>().material = sphereMaterial;
+    }
+
+
+    // ********************************************************************************************************
+    // ********************************************************************************************************
+    //                                              GENERAL/HELPER
+    // ********************************************************************************************************
+    // ********************************************************************************************************
+
+    private void Update()
+    {
+        // convergence
+        if (!convergenceEnabled)
+        {
+            UpdateBlurClones();
+        }
+
+        //Quaternion offsetRotation = Quaternion.Euler(rayDownAngle, 0f, 0f);
+        //Vector3 adjustedDirection = offsetRotation * rayOrigin.forward;
+
+        //Ray ray = new Ray(rayOrigin.position, adjustedDirection);
+        //Debug.DrawRay(rayOrigin.position, adjustedDirection * 100f, Color.red);
+
+        return;
+        //if (Physics.Raycast(ray, out RaycastHit hit, rayDistance, raycastLayerMask))
+        //{
+        //    // Sphere auf Treffpunkt setzen
+        //    markerSphere.transform.position = hit.point;
+
+        //    // X/Y Skala basierend auf Distanz
+        //    float distance = Vector3.Distance(rayOrigin.position, hit.point);
+        //    markerSphere.transform.localScale = new Vector3(distance * scaleFactor, distance * scaleFactor, zScale);
+        //    markerSphere.transform.rotation = Quaternion.LookRotation(markerSphere.transform.position - Camera.main.transform.position);
+        //}
+    }
+
+    public void RestoreNormalView()
+    {
+        if (!disparityEnabled)
+            ToggleDisparity();
+        if (!convergenceEnabled)
+            ToggleConvergence();
+        if (accommodationEnabled)
+            ToggleAccommodation();
+        if (!motionParallaxEnabled)
+            ToggleMotionParallax();
+        if (accretionEnabled)
+            ToggleAccretion();
+        if (knownSizeEnabled)
+            ToggleKnownSize();
+        if (atmosphericPerspectiveEnabled)
+            ToggleAtmosphericPerspective();
     }
 
     public void ToggleVisibility()
     {
         openedEyesIconUI.SetActive(!openedEyesIconUI.activeSelf);
         closedEyesIconUI.SetActive(!closedEyesIconUI.activeSelf);
+        nextButtonUI.SetActive(!nextButtonUI.activeSelf);
         gameObject.SetActive(!gameObject.activeSelf);
+    }
+
+    private IEnumerator ShowUI(GameObject objectToShow)
+    {
+        objectToShow.SetActive(true);
+        objectToShow.GetComponent<Animator>().SetTrigger("show");
+        yield return null;
     }
 
     public void UpdateRatingSlider(GameObject slider)
@@ -190,23 +274,26 @@ public class ToggleDepthCuePanel : MonoBehaviour
 
     public void ResetWasToggledState()
     {
-        shadowCastWasToggled = false;
-        shapeFromShadingWasToggled = false;
-        occlusionWasToggled = false;
-        disparityWasToggled = false;
-        motionParallaxWasToggled = false;
-        atmosphericPerspectiveWasToggled = false;
-        relativeSizeWasToggled = false;
-        knownSizeWasToggled = false;
-        heightInFieldOfViewWasToggled = false;
-        accommodationWasToggled = false;
-        convergenceWasToggled = false;
-        imageBlurWasToggled = false;
-        textureGradientWasToggled = false;
-        linearPerspectiveWasToggled = false;
-        accretionWasToggled = false;
+        shadowCastWasToggled = true;
+        shapeFromShadingWasToggled = true;
+        occlusionWasToggled = true;
+        disparityWasToggled = true;
+        motionParallaxWasToggled = true;
+        atmosphericPerspectiveWasToggled = true;
+        relativeSizeWasToggled = true;
+        knownSizeWasToggled = true;
+        heightInFieldOfViewWasToggled = true;
+        accommodationWasToggled = true;
+        convergenceWasToggled = true;
+        imageBlurWasToggled = true;
+        textureGradientWasToggled = true;
+        linearPerspectiveWasToggled = true;
+        accretionWasToggled = true;
     }
 
+    /// <summary>
+    /// Whether or not all depth cues were toggled each at least once.
+    /// </summary>
     public bool CheckIfCompleted()
     {
         if (shadowCastWasToggled && shapeFromShadingWasToggled && occlusionWasToggled && disparityWasToggled &&
@@ -214,25 +301,13 @@ public class ToggleDepthCuePanel : MonoBehaviour
             knownSizeWasToggled && heightInFieldOfViewWasToggled && accommodationWasToggled && convergenceWasToggled &&
             imageBlurWasToggled && textureGradientWasToggled && linearPerspectiveWasToggled && accretionWasToggled)
         {
-            StartCoroutine(ShowUI(nextButtonUI));
+            if (!nextButtonUI.activeSelf)
+            {
+                StartCoroutine(ShowUI(nextButtonUI));
+            }
             return true;
         }
         return false;
-    }
-
-    private IEnumerator ShowUI(GameObject objectToShow)
-    {
-        objectToShow.SetActive(true);
-        objectToShow.GetComponent<Animator>().SetTrigger("show");
-        yield return null;
-    }
-
-    private void Update()
-    {
-        if (!convergenceEnabled)
-        {
-            UpdateBlurClones();
-        }
     }
 
     // ********************************************************************************************************
@@ -257,67 +332,55 @@ public class ToggleDepthCuePanel : MonoBehaviour
         CheckIfCompleted();
         UpdateRatingSlider(occlusionRatingSlider);
 
-        //foreach (Renderer rend in allRenderers)
-        //{
-        //    foreach (Material mat in rend.materials)
-        //    {
-        //        if (occlusionEnabled)
-        //        {
-        //            // Depth Test und Write wieder normal
-        //            mat.SetInt("_ZTest", (int)CompareFunction.LessEqual);
-        //            mat.SetInt("_ZWrite", 1);
-        //            //mat.renderQueue = -1;
-        //        }
-        //        else
-        //        {
-        //            // Depth Test auf Always und ZWrite aus
-        //            mat.SetInt("_ZTest", (int)CompareFunction.Greater);
-        //            mat.SetInt("_ZWrite", 0);
-        //            //mat.renderQueue = (int)RenderQueue.Transparent;
-        //            //mat.renderQueue = 5000;
-        //        }
-        //    }
-        //}
+        if (!occlusionEnabled)
+        {
+            foreach (Renderer rend in allRenderers)
+            {
+                Material originalMaterial = rend.gameObject.GetComponentInChildren<Renderer>().material;
+                Material transparentMaterial;
+                if (shapeFromShadingEnabled)
+                {
+                    transparentMaterial = new Material(occlusionMaterialLit);
+                }
+                else
+                {
+                    transparentMaterial = new Material(occlusionMaterialUnlit);
+                }
+
+                // additive + transparent
+                //transparentMaterial.SetFloat("_Surface", 1f);
+                //transparentMaterial.SetFloat("_Blend", 2f);
+
+                // color
+                Color c = originalMaterial.GetColor("_BaseColor");
+                c.a = occlusionAlpha;
+                transparentMaterial.SetColor("_BaseColor", c);
+
+                rend.material = transparentMaterial;
+            }
+        }
+        else
+        {
+
+        }
 
         Debug.Log("Occlusion " + (occlusionEnabled ? "enabled" : "disabled"));
     }
 
-    //public void ToggleOcclusion()
-    //{
-    //    StartCoroutine(ChangeRenderQueueLoop());
-    //    Debug.Log("Occlusion " + (occlusionEnabled ? "enabled" : "disabled"));
-    //}
-
-    //public int baseQueue = 3000;
-
-    //public IEnumerator ChangeRenderQueueLoop()
-    //{
-    //    List<Renderer> renderers = allRenderers.ToList();
-    //    occlusionEnabled = !occlusionEnabled;
-
-    //    while (true)
-    //    {
-    //        if (renderers == null || renderers.Count == 0)
-    //            yield break;
-
-    //        // Rotiert die Liste
-    //        Renderer last = renderers[renderers.Count - 1];
-    //        renderers.RemoveAt(renderers.Count - 1);
-    //        renderers.Insert(0, last);
-
-    //        // Neue RenderQueue-Werte setzen
-    //        for (int i = 0; i < renderers.Count; i++)
-    //        {
-    //            if (renderers[i] != null)
-    //            {
-    //                Material mat = renderers[i].material;
-    //                mat.renderQueue = baseQueue + i;
-    //            }
-    //        }
-
-    //        yield return new WaitForSeconds(0f);
-    //    }
-    //}
+    // Old attempt: RenderFeature, Quick switching of layers to create flicker/always visible effect
+    public IEnumerator ChangeRenderLayer()
+    {
+        List<Renderer> occlusionRenderers = new List<Renderer>();
+        while (!occlusionEnabled)
+        {
+            for (int i = 0; i < occlusionRenderers.Count(); i++)
+            {
+                occlusionRenderers[i].gameObject.layer = LayerMask.NameToLayer("onTop");
+                yield return new WaitForSeconds(0.0005f);
+                occlusionRenderers[i].gameObject.layer = LayerMask.NameToLayer("Default");
+            }
+        }
+    }
 
     // ********************************************************************************************************
     // ********************************************************************************************************
@@ -395,6 +458,7 @@ public class ToggleDepthCuePanel : MonoBehaviour
 
         // ----- Neuen visuellen Klon erzeugen -----
         GameObject clone = new GameObject(originalObject.name + "_BlurClone");
+        clone.tag = "BlurClone";
 
         // Parent setzen (wichtig für parallele Bewegung)
         clone.transform.SetParent(originalObject.transform, false);
@@ -581,15 +645,19 @@ public class ToggleDepthCuePanel : MonoBehaviour
         {
             foreach (GameObject relSizeObject in relativeSizeObjects)
             {
-                relSizeObject.SetActive(false);
+                //relSizeObject.SetActive(false);
             }
+            relativeSizeObjects[1].transform.localScale = new Vector3(1.3f, 1.3f, 1.3f);
+            relativeSizeObjects[2].transform.localScale = new Vector3(2f, 2f, 2f);
         }
         else
         {
             foreach (GameObject relSizeObject in relativeSizeObjects)
             {
-                relSizeObject.SetActive(true);
+                //relSizeObject.SetActive(true);
             }
+            relativeSizeObjects[1].transform.localScale = new Vector3(0.8f, 0.8f, 0.8f);
+            relativeSizeObjects[2].transform.localScale = new Vector3(0.6f, 0.6f, 0.6f);
         }
 
         Debug.Log("Relative Size: " + (relativeSizeEnabled ? "ENABLED" : "DISABLED"));
@@ -645,15 +713,55 @@ public class ToggleDepthCuePanel : MonoBehaviour
         {
             foreach (GameObject heightInFieldOfViewObject in heightInFieldOfViewObjects)
             {
-                heightInFieldOfViewObject.SetActive(false);
+                //heightInFieldOfViewObject.SetActive(false);
             }
+
+            heightInFieldOfViewObjects[0].transform.position = new Vector3 (
+                heightInFieldOfViewObjects[0].transform.position.x,
+                2.16f,
+                heightInFieldOfViewObjects[0].transform.position.z);
+
+            heightInFieldOfViewObjects[1].transform.position = new Vector3(
+                heightInFieldOfViewObjects[1].transform.position.x,
+                3.16f,
+                heightInFieldOfViewObjects[1].transform.position.z);
+
+            heightInFieldOfViewObjects[2].transform.position = new Vector3(
+                heightInFieldOfViewObjects[2].transform.position.x,
+                20,
+                heightInFieldOfViewObjects[2].transform.position.z);
+
+            heightInFieldOfViewObjects[3].transform.position = new Vector3(
+                heightInFieldOfViewObjects[3].transform.position.x,
+                30,
+                heightInFieldOfViewObjects[3].transform.position.z);
         }
         else
         {
             foreach (GameObject heightInFieldOfViewObject in heightInFieldOfViewObjects)
             {
-                heightInFieldOfViewObject.SetActive(true);
+                //heightInFieldOfViewObject.SetActive(true);
             }
+
+            heightInFieldOfViewObjects[0].transform.position = new Vector3(
+                heightInFieldOfViewObjects[0].transform.position.x,
+                0.169f,
+                heightInFieldOfViewObjects[0].transform.position.z);
+
+            heightInFieldOfViewObjects[1].transform.position = new Vector3(
+                heightInFieldOfViewObjects[1].transform.position.x,
+                0.56f,
+                heightInFieldOfViewObjects[1].transform.position.z);
+
+            heightInFieldOfViewObjects[2].transform.position = new Vector3(
+                heightInFieldOfViewObjects[2].transform.position.x,
+                4.1f,
+                heightInFieldOfViewObjects[2].transform.position.z);
+
+            heightInFieldOfViewObjects[3].transform.position = new Vector3(
+                heightInFieldOfViewObjects[3].transform.position.x,
+                55,
+                heightInFieldOfViewObjects[3].transform.position.z);
         }
 
         Debug.Log("Height in Field of View: " + (heightInFieldOfViewEnabled ? "ENABLED" : "DISABLED"));
@@ -701,53 +809,46 @@ public class ToggleDepthCuePanel : MonoBehaviour
         CheckIfCompleted();
         UpdateRatingSlider(shapeFromShadingRatingSlider);
 
-        foreach (Renderer rend in allRenderers)
+        if (shapeFromShadingEnabled)
         {
-            if (rend.gameObject.CompareTag("Ground"))
-                continue;
-
-            if (shapeFromShadingEnabled)
+            foreach (Renderer rend in originalMaterials.Keys)
             {
-                // Ursprüngliche Materialien zurücksetzen
-                if (originalMaterials.ContainsKey(rend))
-                    rend.materials = originalMaterials[rend];
+                rend.material = originalMaterials[rend];
             }
-            else
+        }
+        else
+        {
+            foreach (Renderer rend in originalMaterials.Keys)
             {
-                // Originalmaterialien merken
-                if (!originalMaterials.ContainsKey(rend))
-                    originalMaterials[rend] = rend.materials;
-
-                // Ersetze jedes Material durch Unlit-Version
-                Material[] mats = new Material[rend.materials.Length];
-                for (int i = 0; i < rend.materials.Length; i++)
-                {
-                    Material original = rend.materials[i];
-
-                    if (unlitCache.ContainsKey(original))
-                    {
-                        mats[i] = unlitCache[original];
-                    }
-                    else
-                    {
-                        Material unlit = new Material(Shader.Find("Custom/UnlitWithShadowReceiver"));
-
-                        if (original.HasProperty("_MainTex") && original.mainTexture != null)
-                            unlit.mainTexture = original.mainTexture;
-                        if (original.HasProperty("_Color"))
-                            unlit.color = original.color;
-                        if (original.HasProperty("Texture2D_E5864E9"))
-                            unlit.mainTexture = original.mainTexture;
-
-                        mats[i] = unlit;
-                        unlitCache[original] = unlit;
-                    }
-                }
-                rend.materials = mats;
+                rend.material = unlitCache[rend.material];
             }
         }
 
         Debug.Log("Shape From Shading " + (shapeFromShadingEnabled ? "enabled (Lit)" : "disabled (Unlit)"));
+    }
+
+    public Material CreateNoShapeFromShadingMaterial(Renderer original)
+    {
+        if (original.gameObject.CompareTag("Ground") || original.gameObject.CompareTag("ShadowClone")
+            || original.gameObject.CompareTag("BlurClone"))
+            return null;
+
+        // save original
+        if (!originalMaterials.ContainsKey(original))
+            originalMaterials[original] = original.material;
+
+        Material unlit = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+
+        if (original.material.HasProperty("_MainTex") && original.material.mainTexture != null)
+            unlit.mainTexture = original.material.mainTexture;
+        if (original.material.HasProperty("_Color"))
+            unlit.color = original.material.color;
+
+        // create unlit material
+        if (!unlitCache.ContainsKey(original.material))
+            unlitCache[original.material] = unlit;
+
+        return unlit;
     }
 
     // ********************************************************************************************************
@@ -764,13 +865,59 @@ public class ToggleDepthCuePanel : MonoBehaviour
         CheckIfCompleted();
         UpdateRatingSlider(shadowCastRatingSlider);
 
-        foreach (Renderer rend in allRenderers)
+        if (!shadowCastEnabled)
         {
-            rend.shadowCastingMode = shadowCastEnabled ? ShadowCastingMode.On : ShadowCastingMode.Off;
-            rend.receiveShadows = shadowCastEnabled;
+            foreach (GameObject clone in shadowClones)
+            {
+                clone.SetActive(false);
+            }
+        }
+        else
+        {
+            foreach (GameObject clone in shadowClones)
+            {
+                clone.SetActive(true);
+            }
         }
 
         Debug.Log("Shadow Cast " + (shadowCastEnabled ? "enabled" : "disabled"));
+    }
+
+    public void CreateShadowClone(GameObject originalObject)
+    {
+        // Alle MeshRenderer inklusive inaktiver Objekte holen
+        MeshRenderer renderer = originalObject.GetComponentInChildren<MeshRenderer>();
+        MeshFilter originalFilter = originalObject.GetComponentInChildren<MeshFilter>();
+
+        if (originalFilter == null || originalFilter.sharedMesh == null)
+            return;
+
+        // ----- Neuen visuellen Klon erzeugen -----
+        GameObject clone = new GameObject(originalObject.name + "_ShadowClone");
+        clone.tag = "ShadowClone";
+
+        // Parent setzen (wichtig für parallele Bewegung)
+        clone.transform.SetParent(originalObject.transform, false);
+
+        // Lokale Transformwerte kopieren
+        clone.transform.localPosition = Vector3.zero;
+        clone.transform.localRotation = Quaternion.identity;
+        clone.transform.localScale = Vector3.one;
+
+        // Nur notwendige Komponenten hinzufügen
+        MeshFilter newFilter = clone.AddComponent<MeshFilter>();
+        MeshRenderer newRenderer = clone.AddComponent<MeshRenderer>();
+
+        // Mesh referenzieren (NICHT duplizieren → Speicher sparen)
+        newFilter.sharedMesh = originalFilter.sharedMesh;
+
+        newRenderer.sharedMaterial = new Material(renderer.material);
+
+        newRenderer.shadowCastingMode = ShadowCastingMode.ShadowsOnly;
+        newRenderer.receiveShadows = false;
+
+        shadowClones.Add(clone);
+        renderer.shadowCastingMode = ShadowCastingMode.Off;
     }
 
     // ********************************************************************************************************
@@ -816,11 +963,17 @@ public class ToggleDepthCuePanel : MonoBehaviour
 
         if (!accretionEnabled)
         {
-
+            foreach (CarSpawner accretionObject in accretionObjects)
+            {
+                accretionObject.enabled = false;
+            }
         }
         else
         {
-
+            foreach (CarSpawner accretionObject in accretionObjects)
+            {
+                accretionObject.enabled = true;
+            }
         }
 
         Debug.Log("Accretion: " + (accretionEnabled ? "ENABLED" : "DISABLED"));
