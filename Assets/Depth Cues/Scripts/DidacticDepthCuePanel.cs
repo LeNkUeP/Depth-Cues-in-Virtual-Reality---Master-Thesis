@@ -39,9 +39,8 @@ public class DidacticDepthCuePanel : MonoBehaviour
     [Header("Motion parallax - Settings")]
     public GameObject motionParallaxVideo;
     private string motionParallaxHeading = "Bewegungsparallaxe";
-    private string motionParallaxExplanation = "Bei seitlicher Kopfbewegung verschieben sich nahe Objekte schneller über die Netzhaut " +
-        "als entfernte Objekte. Diese unterschiedliche Winkelgeschwindigkeit liefert Information über relative Tiefenabstände. " +
-        "Kopfbewegungen können zusätzliche Tiefeninformation vermitteln.";
+    private string motionParallaxExplanation = "Bei Kopfbewegungen verschieben sich nahe Objekte schneller über die Netzhaut " +
+        "als entfernte Objekte. Diese unterschiedliche Winkelgeschwindigkeit liefert Information über relative Tiefenabstände. ";
 
     [Header("Accretion - Settings")]
     public GameObject accretionVideo;
@@ -68,7 +67,7 @@ public class DidacticDepthCuePanel : MonoBehaviour
     [Header("Convergence - Settings")]
     public GameObject convergenceVideo;
     private string convergenceHeading = "Konvergenz";
-    private string convergenceExplanation = "Mit Konvergenz wird in der Wahrnehmungsphysiologie die Innendrehung beider Augen bezeichnet. " +
+    private string convergenceExplanation = "Mit Konvergenz wird in der Wahrnehmungsphysiologie die mechanische Innendrehung beider Augen bezeichnet. " +
         "Diese findet statt wenn sich ein fokussiertes Objekt das zwischen den Augen liegt, diesen annähert." +
         "Je größer die Konvergenz, bzw. der Winkel zwischen Objekt und den beiden Blickrichtungen, " +
         "desto näher befindet sich das Objekt an den Augen des Betrachters.";
