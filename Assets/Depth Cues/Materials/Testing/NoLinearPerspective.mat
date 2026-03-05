@@ -120,7 +120,7 @@ Material:
     - _ReceiveShadows: 1
     - _ReferenceDepth: 1
     - _ReferenceDistance: 1
-    - _SizeFactor: 0.1
+    - _SizeFactor: 1.65
     - _Smoothness: 0.5
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1

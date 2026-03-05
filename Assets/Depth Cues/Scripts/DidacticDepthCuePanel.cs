@@ -162,6 +162,40 @@ public class DidacticDepthCuePanel : MonoBehaviour
 
     }
 
+    public void ToggleVisibility()
+    {
+        // only hide ddo not dedactivate this gameobject, update needs to run
+        if (gameObject.transform.localScale == Vector3.zero)
+        {
+            StartCoroutine(ShowUI(gameObject));
+            if (CheckIfCompleted())
+            {
+                StartCoroutine(ShowUI(nextButtonUI));
+            }
+        }
+        else
+        {
+            StartCoroutine(HideUIButKeepActive(gameObject));
+            if (CheckIfCompleted())
+            {
+                StartCoroutine(HideUI(nextButtonUI));
+            }
+        }
+    }
+
+    private IEnumerator HideUI(GameObject objectToHide)
+    {
+        objectToHide.GetComponent<Animator>().SetTrigger("hide");
+        yield return new WaitForSeconds(.5f);
+        objectToHide.SetActive(false);
+    }
+
+    private IEnumerator HideUIButKeepActive(GameObject objectToHide)
+    {
+        objectToHide.GetComponent<Animator>().SetTrigger("hide");
+        yield return null;
+    }
+
     public void HideTextAndVideoUI()
     {
         textAndVideoUI.GetComponent<Canvas>().enabled = false;

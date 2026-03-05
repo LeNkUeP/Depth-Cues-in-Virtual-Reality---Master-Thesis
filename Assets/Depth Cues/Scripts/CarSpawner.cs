@@ -28,7 +28,6 @@ public class CarSpawner : MonoBehaviour
     private void OnDisable()
     {
         StopAllCoroutines();
-        //DestroyAllCars();
         HideAllCars();
     }
 
@@ -39,9 +38,9 @@ public class CarSpawner : MonoBehaviour
 
         while (true)
         {
+            HideAllCars();
             for (int i = 0; i < spawnCount; i++)
             {
-                //SpawnCar();
                 cars[i].GetComponent<Car>().enabled = true;
                 yield return new WaitForSeconds(spawnDelay);
             }

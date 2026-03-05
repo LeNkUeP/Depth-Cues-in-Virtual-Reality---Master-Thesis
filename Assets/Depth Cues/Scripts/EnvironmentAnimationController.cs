@@ -21,6 +21,7 @@ public class EnvironmentAnimationController : MonoBehaviour
     [Header("Distance multiplier")]
     public float minHeightMultiplier = 1.5f;
     public float maxHeightMultiplier = 1.6f;
+    public float minTravelDistance = 5f;
 
     public void DisableAllObjects(GameObject sceneEnvironment)
     {
@@ -96,7 +97,11 @@ public class EnvironmentAnimationController : MonoBehaviour
         // random distance, minimal = objectheight + y-coord, scale with multipliers 
         float heightMultiplier = Random.Range(minHeightMultiplier, maxHeightMultiplier);
         float travelDistance = objectHeight * heightMultiplier + Mathf.Abs(groundY-targetPosition.y);
-
+        // to small looks weird
+        if (travelDistance < minTravelDistance)
+        {
+            travelDistance = minTravelDistance;
+        }
 
         // animate from this hidden position (under ground)
         Vector3 startFromPosition = new Vector3(
@@ -171,6 +176,11 @@ public class EnvironmentAnimationController : MonoBehaviour
         // random distance, minimal = objectheight + y-coord, scale with multipliers 
         float heightMultiplier = Random.Range(minHeightMultiplier, maxHeightMultiplier);
         float travelDistance = objectHeight * heightMultiplier + Mathf.Abs(groundY - startFromPosition.y);
+        // to small looks weird
+        if (travelDistance < minTravelDistance)
+        {
+            travelDistance = minTravelDistance;
+        }
 
         // animate from this hidden position (under ground)
         Vector3 targetPosition = new Vector3(

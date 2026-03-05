@@ -24,16 +24,14 @@ public class DidacticPhaseManager: MonoBehaviour
     public EnvironmentAnimationController environmentAnimationController;
     public StudyDataManager studyDataManager;
 
-    [Header("Scene Objects")]
+    [Header("Scene Environments")]
     public GameObject phase2Environment;
-    public GameObject[] phase2EnvironmentObjects;
-
-    private Vector3 toggleMenuStarterPosition;
 
     private void Start()
     {
         DisableAllUI();
-        //environmentAnimationController.DisableAllObjects(phase2Environment);
+        // hide phase 2 scene
+        environmentAnimationController.DisableAllObjects(phase2Environment);
 
         PreGameInitializations();
 
@@ -57,25 +55,28 @@ public class DidacticPhaseManager: MonoBehaviour
         toggleDepthCueUI.SetActive(false);
         hideButtonUI.SetActive(false);
         phase3IntroUI.SetActive(false);
-}
+    }
 
     private void PreGameInitializations()
     {
-        // Must be active to complete initialization process, hide by translating far away 
+        // Must be active to complete initialization process
         toggleDepthCueUI.SetActive(true);
-        toggleMenuStarterPosition = toggleDepthCueUI.transform.position;
-        toggleDepthCueUI.transform.position = Vector3.one * 1000;
+        // only hide visually
+        toggleDepthCueUI.GetComponent<ToggleDepthCuePanel>().ToggleVisibility();
+        // Switch back visibility icon because this is a special case at the beginning
+        toggleDepthCueUI.GetComponent<ToggleDepthCuePanel>().SwitchHideUIEyeIcons();
 
         // Prevents lag/initialization in moment of usage
         toggleDepthCueUI.GetComponent<ToggleDepthCuePanel>().ToggleAtmosphericPerspective();
         toggleDepthCueUI.GetComponent<ToggleDepthCuePanel>().ToggleAtmosphericPerspective();
+        //toggleDepthCueUI.GetComponent<ToggleDepthCuePanel>().ToggleLinearPerspective();
+        //toggleDepthCueUI.GetComponent<ToggleDepthCuePanel>().ToggleLinearPerspective();
         //toggleDepthCueUI.GetComponent<ToggleDepthCuePanel>().ToggleShapeFromShading();
         //toggleDepthCueUI.GetComponent<ToggleDepthCuePanel>().ToggleShapeFromShading();
 
         // keep active to preload videos and prevent lag
         didacticUI.SetActive(true);
-        didacticUI.GetComponent<PokeInteractable>().enabled = false;
-        didacticUI.GetComponentInChildren<Canvas>().enabled = false;
+        didacticUI.GetComponent<DidacticDepthCuePanel>().ToggleVisibility();
 
         // Toggle depth cue panel slider should be invisible when no cue was selected
         toggleDepthCueUI.GetComponent<ToggleDepthCuePanel>().HideCurrentRatingSlider();
@@ -164,16 +165,12 @@ public class DidacticPhaseManager: MonoBehaviour
         }
         else if (additionalRatingTaskUI.activeSelf)
         {
-            // reset depth cue panels position and proceed with normal show animation
-            toggleDepthCueUI.SetActive(false);
-            toggleDepthCueUI.transform.position = toggleMenuStarterPosition;
-
             StartCoroutine(HideUI(nextButtonUI));
             StartCoroutine(SwitchUI(additionalRatingTaskUI, toggleDepthCueUI));
             StartCoroutine(DelayedShowUI(hideButtonUI));
 
             // show scene objects
-            environmentAnimationController.AnimateShowObjects(phase2EnvironmentObjects);
+            environmentAnimationController.AnimateShowObjects(phase2Environment);
         }
         // PHASE 3: EXPLORATIVE TASKS
         else if (toggleDepthCueUI.activeSelf)
@@ -181,7 +178,7 @@ public class DidacticPhaseManager: MonoBehaviour
             // Unnatural depth cues need to be resetted/deactivated
             toggleDepthCueUI.GetComponent<ToggleDepthCuePanel>().RestoreNormalView();
 
-            environmentAnimationController.AnimateHideObjects(phase2EnvironmentObjects);
+            environmentAnimationController.AnimateHideObjects(phase2Environment);
             StartCoroutine(HideUI(hideButtonUI));
             StartCoroutine(SwitchUI(toggleDepthCueUI, phase3IntroUI));
         }
