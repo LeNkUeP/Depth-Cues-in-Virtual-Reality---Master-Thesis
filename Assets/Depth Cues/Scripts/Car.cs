@@ -1,39 +1,9 @@
 using UnityEngine;
 
-public class Car : MonoBehaviour
+public class Car : AccretionObject
 {
-    [Header("General")]
+    [Header("Car Settings")]
     public GameObject[] wheels;
-
-    [Header("Driving Settings")]
-    public Vector3 driveDirection = Vector3.right;
-    public float speed = 10f;
-
-    private bool isDriving = false;
-
-    void Start()
-    {
-        Drive();
-    }
-
-    void Update()
-    {
-        if (isDriving)
-        {
-            MoveCar();
-            RotateWheels();
-        }
-    }
-
-    public void Drive()
-    {
-        isDriving = true;
-    }
-
-    void MoveCar()
-    {
-        transform.Translate(speed * Time.deltaTime * driveDirection.normalized, Space.World);
-    }
 
     void RotateWheels()
     {
@@ -46,5 +16,11 @@ public class Car : MonoBehaviour
                 wheel.transform.Rotate(rotationSpeed, 0f, 0f);
             }
         }
+    }
+
+    protected override void Update()
+    {
+        base.Update();
+        RotateWheels();
     }
 }

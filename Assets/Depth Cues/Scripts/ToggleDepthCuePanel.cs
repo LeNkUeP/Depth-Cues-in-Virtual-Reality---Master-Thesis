@@ -89,7 +89,7 @@ public class ToggleDepthCuePanel : MonoBehaviour
     private FirstPersonLocomotor locomotor;
 
     [Header("Accretion - Settings")]
-    public CarSpawner[] accretionObjects;
+    public AccretionSpawner[] accretionSpawners;
 
     [Header("Occlusion - Settings")]
     public Material occlusionMaterialLit;
@@ -114,17 +114,19 @@ public class ToggleDepthCuePanel : MonoBehaviour
     public int bladeCount = 6;
     public float focusSmoothTime = 0.1f;
 
-    private Volume dofVolume;
-    private DepthOfField dof;
+    private Volume dofVolumeBokeh;
+    private DepthOfField dofBokeh;
     private float targetFocusDistance;
     private float currentFocusDistance;
     private float focusVelocity = 0f;
 
     [Header("Convergence - Settings")]
     public Vector3 convergenceCameraScale = new Vector3(2.5f,2.5f,2.5f);
+    public float convergenceFocusTreshold = .5f;
 
     [Header("Image Blur - Settings")]
-    // nothing, blur settings configured at accommodation
+    private Volume dofVolumeGaussian;
+    private DepthOfField dofGaussian;
 
     [Header("Atmospheric Perspective - Settings")]
     [Range(0, 1)]
@@ -176,22 +178,28 @@ public class ToggleDepthCuePanel : MonoBehaviour
     public void Start()
     {
         // general
-        allRenderers = sceneEnvironment.GetComponentsInChildren<Renderer>(true);
         cam = Camera.main;
 
         // motion parallax
         cameraRig = FindFirstObjectByType<OVRCameraRig>();
         locomotor = FindFirstObjectByType<FirstPersonLocomotor>();
 
+        // accommodadtion
+        InitAccommodation();
+
+        // init environment related stuff
+        InitEnvironment();
+    }
+
+    public void InitEnvironment()
+    {
+        allRenderers = sceneEnvironment.GetComponentsInChildren<Renderer>(true);
+
         foreach (Renderer rend in allRenderers)
         {
             CreateNoShapeFromShadingMaterial(rend);
             CreateShadowClone(rend.gameObject);
         }
-
-        
-        // accommodadtion,
-        InitAccommodation();
 
         // relative size, groups "equal" objects to manipulate relative scale
         BuildRelativeSizeGroups();
@@ -216,7 +224,7 @@ public class ToggleDepthCuePanel : MonoBehaviour
         // check current focus target, update dof volume
         if (accommodationEnabled)
         {
-            if (dofVolume.gameObject.activeSelf)
+            if (dofVolumeBokeh.gameObject.activeSelf)
             {
                 UpdateFocusTarget();
                 SmoothFocus();
@@ -230,11 +238,45 @@ public class ToggleDepthCuePanel : MonoBehaviour
             AlignObjectsAtVisualHeight();
         }
 
-        // scale all "equal" objects relative to distance until detoggled
-        if (!relativeSizeEnabled)
+        // scale all "equal" objects relative to distance until detoggled, also needed for linear perspective
+        if (!relativeSizeEnabled || !linearPerspectiveEnabled)
         {
             ScaleRelativeSizeGroups();
         }
+    }
+
+    public void DisableAllCues()
+    {
+        if (occlusionEnabled)
+            ToggleOcclusion();
+        if (disparityEnabled)
+            ToggleDisparity();
+        if (convergenceEnabled)
+            ToggleConvergence();
+        if (accommodationEnabled)
+            ToggleAccommodation();
+        if (imageBlurEnabled)
+            ToggleImageBlur();
+        if (linearPerspectiveEnabled)
+            ToggleLinearPerspective();
+        if (textureGradientEnabled)
+            ToggleTextureGradient();
+        if (relativeSizeEnabled)
+            ToggleRelativeSize();
+        if (knownSizeEnabled)
+            ToggleKnownSize();
+        if (heightInFieldOfViewEnabled)
+            ToggleHeightInFieldOfView();
+        if (atmosphericPerspectiveEnabled)
+            ToggleAtmosphericPerspective();
+        if (shapeFromShadingEnabled)
+            ToggleShapeFromShading();
+        if (shadowCastEnabled)
+            ToggleShadowCast();
+        if (motionParallaxEnabled)
+            ToggleMotionParallax();
+        if (accretionEnabled)
+            ToggleAccretion();
     }
 
     public void RestoreNormalView()
@@ -269,6 +311,97 @@ public class ToggleDepthCuePanel : MonoBehaviour
             ToggleMotionParallax();
         if (accretionEnabled)
             ToggleAccretion();
+    }
+
+    public void SetStartingCueState()
+    {
+        if (!occlusionEnabled)
+        {
+            occlusionEnabled = true;
+            ToggleOcclusion();
+        }
+        if (!disparityEnabled)
+        {
+            disparityEnabled = true;
+            ToggleDisparity();
+        }
+        if (!convergenceEnabled)
+        {
+            convergenceEnabled = true;
+            ToggleConvergence();
+        }
+        if (accommodationEnabled)
+        {
+            accommodationEnabled = false;
+            ToggleAccommodation();
+        }
+        if (imageBlurEnabled)
+        {
+            imageBlurEnabled = false;
+            ToggleImageBlur();
+        }
+        if (!linearPerspectiveEnabled)
+        {
+            linearPerspectiveEnabled = true;
+            ToggleLinearPerspective();
+        }
+        if (!textureGradientEnabled)
+        {
+            textureGradientEnabled = true;
+            ToggleTextureGradient();
+        }
+        if (!relativeSizeEnabled)
+        {
+            relativeSizeEnabled = true;
+            ToggleRelativeSize();
+        }
+        if (!knownSizeEnabled)
+        {
+            knownSizeEnabled = true;
+            ToggleKnownSize();
+        }
+        if (!heightInFieldOfViewEnabled)
+        {
+            heightInFieldOfViewEnabled = true;
+            ToggleHeightInFieldOfView();
+        }
+        if (!atmosphericPerspectiveEnabled)
+        {
+            atmosphericPerspectiveEnabled = true;
+            ToggleAtmosphericPerspective();
+        }
+        if (!shapeFromShadingEnabled)
+        {
+            shapeFromShadingEnabled = true;
+            ToggleShapeFromShading();
+        }
+        if (!shadowCastEnabled)
+        {
+            shadowCastEnabled = true;
+            ToggleShadowCast();
+        }
+        if (!motionParallaxEnabled)
+        {
+            motionParallaxEnabled = true;
+            ToggleMotionParallax();
+        }
+        if (!accretionEnabled)
+        {
+            accretionEnabled = true;
+            ToggleAccretion();
+        }
+        else
+        {
+            // Wait for scene animation end (see EnvironmentAnimationController)
+            StartCoroutine(StartAccretionAfterDelay());
+        }
+    }
+
+    public IEnumerator StartAccretionAfterDelay()
+    {
+        yield return new WaitForSeconds(3f);
+        accretionEnabled = false;
+        ToggleAccretion();
     }
 
     public void ToggleVisibility()
@@ -491,13 +624,9 @@ public class ToggleDepthCuePanel : MonoBehaviour
         CheckIfCompleted();
         UpdateRatingSlider(disparityRatingSlider);
 
-        // only makes sense if linear perspective is active
         if (!disparityEnabled)
         {
-            if (linearPerspectiveEnabled)
-            {
-                cam.transform.localScale = Vector3.zero;
-            }
+            cam.transform.localScale = Vector3.zero;
         }
         else
         {
@@ -530,7 +659,7 @@ public class ToggleDepthCuePanel : MonoBehaviour
         // increase camera scale for increased diplopia effect
         if (!convergenceEnabled)
         {
-            if (linearPerspectiveEnabled && disparityEnabled)
+            if (disparityEnabled)
             {
                 cam.transform.localScale = convergenceCameraScale;
             }
@@ -571,33 +700,33 @@ public class ToggleDepthCuePanel : MonoBehaviour
 
     public void InitAccommodation()
     {
-        GameObject volumeObj = new GameObject("DOFVolume");
-        dofVolume = volumeObj.AddComponent<Volume>();
-        dofVolume.isGlobal = true;
+        GameObject volumeObj = new GameObject("DOFVolumeBokeh");
+        dofVolumeBokeh = volumeObj.AddComponent<Volume>();
+        dofVolumeBokeh.isGlobal = true;
 
         VolumeProfile profile = ScriptableObject.CreateInstance<VolumeProfile>();
-        dof = profile.Add<DepthOfField>(true);
-        dof.mode.value = DepthOfFieldMode.Bokeh;
+        dofBokeh = profile.Add<DepthOfField>(true);
+        dofBokeh.mode.value = DepthOfFieldMode.Bokeh;
         SetFarPointState();
 
-        dofVolume.profile = profile;
+        dofVolumeBokeh.profile = profile;
 
-        dof.mode.value = DepthOfFieldMode.Bokeh;
-        dof.focusDistance.value = maxFocusDistance;
+        dofBokeh.mode.value = DepthOfFieldMode.Bokeh;
+        dofBokeh.focusDistance.value = maxFocusDistance;
 
         currentFocusDistance = maxFocusDistance;
         targetFocusDistance = maxFocusDistance;
 
-        dofVolume.gameObject.SetActive(false);
+        dofVolumeBokeh.gameObject.SetActive(false);
     }
 
     public void SetFarPointState()
     {
         // 6m or infinity is farpoint for people with normal eye vision
-        dof.focusDistance.value = 6;
-        dof.aperture.value = 16;
-        dof.focalLength.value = 90;
-        dof.bladeCount.value = bladeCount;
+        dofBokeh.focusDistance.value = 6;
+        dofBokeh.aperture.value = 16;
+        dofBokeh.focalLength.value = 90;
+        dofBokeh.bladeCount.value = bladeCount;
     }
 
     void UpdateFocusTarget()
@@ -613,6 +742,11 @@ public class ToggleDepthCuePanel : MonoBehaviour
         if (Physics.Raycast(ray, out RaycastHit hit, maxDist, focusLayer))
         {
             targetFocusDistance = hit.distance;
+
+            // convergence disabled -> restrict focus area (near focus not possible)
+            if (disparityEnabled && !convergenceEnabled && targetFocusDistance < convergenceFocusTreshold)
+                targetFocusDistance = maxFocusDistance;
+
             return;
         }
 
@@ -638,7 +772,8 @@ public class ToggleDepthCuePanel : MonoBehaviour
             }
         }
 
-        if (!found)
+        // nothing found, or convergence disabled -> restrict focus area (near focus not possible)
+        if (!found || (disparityEnabled && !convergenceEnabled && targetFocusDistance < convergenceFocusTreshold))
             targetFocusDistance = maxFocusDistance;
     }
 
@@ -663,10 +798,10 @@ public class ToggleDepthCuePanel : MonoBehaviour
 
         float focusDist = (currentFocusDistance > nearSoftDistance) ? maxFocusDistance : currentFocusDistance;
 
-        dof.focusDistance.value = focusDist;
-        dof.aperture.value = aperture;
-        dof.focalLength.value = focalLength;
-        dof.bladeCount.value = bladeCount;
+        dofBokeh.focusDistance.value = focusDist;
+        dofBokeh.aperture.value = aperture;
+        dofBokeh.focalLength.value = focalLength;
+        dofBokeh.bladeCount.value = bladeCount;
     }
 
 
@@ -686,11 +821,11 @@ public class ToggleDepthCuePanel : MonoBehaviour
 
         if (!imageBlurEnabled)
         {
-            dofVolume.gameObject.SetActive(false);
+            dofVolumeBokeh.gameObject.SetActive(false);
         }
         else
         {
-            dofVolume.gameObject.SetActive(true);
+            dofVolumeBokeh.gameObject.SetActive(true);
         }
     }
 
@@ -711,20 +846,54 @@ public class ToggleDepthCuePanel : MonoBehaviour
 
         if (!linearPerspectiveEnabled)
         {
-            orthographicCamera.gameObject.SetActive(true);
-            cam.transform.localScale = Vector3.one;
-            cam.cullingMask = 1 << LayerMask.NameToLayer("OrthographicView");
+            // old 2d cam plane attempt -> really ugly and confusing
+            //orthographicCamera.gameObject.SetActive(true);
+            //cam.transform.localScale = Vector3.one;
+            //cam.cullingMask = 1 << LayerMask.NameToLayer("OrthographicView");
+
+            // deactivate visual for all ground(flat and wide) objects -> important cue to linear perspective
+            foreach (Renderer rend in allRenderers)
+            {
+                if (rend.gameObject.CompareTag("NotAffectedByScaleOrPositionEffects"))
+                {
+                    rend.enabled = false;
+                }
+            }
+
+            // objects should have equal size regardless of distance during absence of linear perspective
+            if (relativeSizeEnabled)
+            {
+                linearPerspectiveEnabled = true;
+                ToggleRelativeSize();
+                linearPerspectiveEnabled = false;
+                relativeSizeEnabled = true;
+            }
         }
         else
         {
-            orthographicCamera.gameObject.SetActive(false);
-            cam.cullingMask = ~0;
-            if (!disparityEnabled)
+            //orthographicCamera.gameObject.SetActive(false);
+            //cam.cullingMask = ~0;
+            //if (!disparityEnabled)
+            //{
+            //    cam.transform.localScale = Vector3.zero;
+            //}else if (!convergenceEnabled)
+            //{
+            //    cam.transform.localScale = convergenceCameraScale;
+            //}
+
+            foreach (Renderer rend in allRenderers)
             {
-                cam.transform.localScale = Vector3.zero;
-            }else if (!convergenceEnabled)
+                if (rend.gameObject.CompareTag("NotAffectedByScaleOrPositionEffects"))
+                {
+                    rend.enabled = true;
+                }
+            }
+
+            // reset relative size if not toggled otherwise during absence of linear perspective
+            if (relativeSizeEnabled)
             {
-                cam.transform.localScale = convergenceCameraScale;
+                relativeSizeEnabled = false;
+                ToggleRelativeSize();
             }
         }
     }
@@ -784,6 +953,12 @@ public class ToggleDepthCuePanel : MonoBehaviour
         CheckIfCompleted();
         UpdateRatingSlider(relativeSizeRatingSlider);
 
+        // if linear perspective is disabled -> relativeSize should be disabled all the time
+        if (!linearPerspectiveEnabled)
+        {
+            return;
+        }
+
         if (!relativeSizeEnabled)
         {
             StoreOriginalRelativeScales();
@@ -836,12 +1011,12 @@ public class ToggleDepthCuePanel : MonoBehaviour
 
             if (isPrimitive)
             {
-                // Primitive: Mesh + Material + Scale
-                groupKey = meshName + "_" + materialName + "_" + scale.ToString();
+                // Primitive: Mesh + Scale
+                groupKey = meshName + "_" + scale.ToString();
             }
             else
             {
-                // Normale Meshes: nur Mesh reicht
+                // Normal Meshes: Mesh
                 groupKey = meshName;
             }
 
@@ -1278,16 +1453,16 @@ public class ToggleDepthCuePanel : MonoBehaviour
 
         if (!accretionEnabled)
         {
-            foreach (CarSpawner accretionObject in accretionObjects)
+            foreach (AccretionSpawner accretionSpawner in accretionSpawners)
             {
-                accretionObject.enabled = false;
+                accretionSpawner.enabled = false;
             }
         }
         else
         {
-            foreach (CarSpawner accretionObject in accretionObjects)
+            foreach (AccretionSpawner accretionSpawner in accretionSpawners)
             {
-                accretionObject.enabled = true;
+                accretionSpawner.enabled = true;
             }
         }
     }

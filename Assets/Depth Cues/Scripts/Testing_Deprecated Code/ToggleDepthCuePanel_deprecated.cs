@@ -87,7 +87,7 @@ public class ToggleDepthCuePanel_dedprecated : MonoBehaviour
     private FirstPersonLocomotor locomotor;
 
     [Header("Accretion - Settings")]
-    public CarSpawner[] accretionObjects;
+    public AccretionSpawner[] accretionObjects;
 
     [Header("Occlusion - Settings")]
     public Material occlusionMaterialLit;
@@ -1206,14 +1206,14 @@ public class ToggleDepthCuePanel_dedprecated : MonoBehaviour
 
         if (!accretionEnabled)
         {
-            foreach (CarSpawner accretionObject in accretionObjects)
+            foreach (AccretionSpawner accretionObject in accretionObjects)
             {
                 accretionObject.enabled = false;
             }
         }
         else
         {
-            foreach (CarSpawner accretionObject in accretionObjects)
+            foreach (AccretionSpawner accretionObject in accretionObjects)
             {
                 accretionObject.enabled = true;
             }

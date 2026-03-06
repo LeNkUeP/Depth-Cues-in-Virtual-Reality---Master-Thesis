@@ -29,9 +29,9 @@ TagManager:
   - SamplesInfoPanel
   - QDSUIToggleCheckboxRadio
   - Ground
-  - car
   - ShadowClone
   - NotAffectedByScaleOrPositionEffects
+  - accretionObject
   layers:
   - Default
   - TransparentFX

@@ -12,6 +12,7 @@ public class DidacticPhaseManager: MonoBehaviour
     public GameObject explanationDepthCuesUI;
     public GameObject explanationBinoAndMonoUI;
     public GameObject explanationDidacticPartUI;
+    public GameObject explanationTasksUI;
     public GameObject phase1IntroUI;
     public GameObject didacticUI;
     public GameObject phase2IntroUI;
@@ -19,25 +20,27 @@ public class DidacticPhaseManager: MonoBehaviour
     public GameObject toggleDepthCueUI;
     public GameObject hideButtonUI;
     public GameObject phase3IntroUI;
+    public GameObject phase3FarTaskUI;
 
     [Header("Managers & Controllers")]
     public EnvironmentAnimationController environmentAnimationController;
+    public ToggleDepthCueController toggleDepthCueController;
     public StudyDataManager studyDataManager;
 
     [Header("Scene Environments")]
     public GameObject phase2Environment;
+    public GameObject phase3Environment;
 
     private void Start()
     {
-        DisableAllUI();
-        // hide phase 2 scene
-        environmentAnimationController.DisableAllObjects(phase2Environment);
-
+        EnableAllEnvironments();
         PreGameInitializations();
+    }
 
-        // first only start button should be visible to start prototype
-        startButtonUI.SetActive(true);
-        startButtonUI.GetComponent<Animator>().SetTrigger("pulse");
+    public void EnableAllEnvironments()
+    {
+        phase2Environment.SetActive(true);
+        phase3Environment.SetActive(true);
     }
 
     private void DisableAllUI()
@@ -48,6 +51,7 @@ public class DidacticPhaseManager: MonoBehaviour
         explanationDepthCuesUI.SetActive(false);
         explanationBinoAndMonoUI.SetActive(false);
         explanationDidacticPartUI.SetActive(false);
+        explanationTasksUI.SetActive(false);
         phase1IntroUI.SetActive(false);
         didacticUI.SetActive(false);
         phase2IntroUI.SetActive(false);
@@ -55,10 +59,16 @@ public class DidacticPhaseManager: MonoBehaviour
         toggleDepthCueUI.SetActive(false);
         hideButtonUI.SetActive(false);
         phase3IntroUI.SetActive(false);
+        phase3FarTaskUI.SetActive(false);
     }
 
     private void PreGameInitializations()
     {
+        DisableAllUI();
+        // hide phase 2 scene
+        environmentAnimationController.DisableAllObjects(phase2Environment);
+        environmentAnimationController.DisableAllObjects(phase3Environment);
+
         // Must be active to complete initialization process
         toggleDepthCueUI.SetActive(true);
         // only hide visually
@@ -81,6 +91,10 @@ public class DidacticPhaseManager: MonoBehaviour
         // Toggle depth cue panel slider should be invisible when no cue was selected
         toggleDepthCueUI.GetComponent<ToggleDepthCuePanel>().HideCurrentRatingSlider();
         toggleDepthCueUI.GetComponent<ToggleDepthCuePanel>().ResetWasToggledState();
+
+        // first only start button should be visible to start prototype
+        startButtonUI.SetActive(true);
+        startButtonUI.GetComponent<Animator>().SetTrigger("pulse");
     }
 
     private void ShowKeyboard()
@@ -141,7 +155,11 @@ public class DidacticPhaseManager: MonoBehaviour
         }
         else if (explanationDidacticPartUI.activeSelf)
         {
-            StartCoroutine(SwitchUI(explanationDidacticPartUI, phase1IntroUI));
+            StartCoroutine(SwitchUI(explanationDidacticPartUI, explanationTasksUI)); 
+        }
+        else if (explanationTasksUI.activeSelf)
+        {
+            StartCoroutine(SwitchUI(explanationTasksUI, phase1IntroUI));
         }
         else if (phase1IntroUI.activeSelf)
         {
@@ -167,6 +185,7 @@ public class DidacticPhaseManager: MonoBehaviour
         {
             StartCoroutine(HideUI(nextButtonUI));
             StartCoroutine(SwitchUI(additionalRatingTaskUI, toggleDepthCueUI));
+            toggleDepthCueUI.GetComponent<ToggleDepthCuePanel>().SetStartingCueState();
             StartCoroutine(DelayedShowUI(hideButtonUI));
 
             // show scene objects
@@ -184,9 +203,34 @@ public class DidacticPhaseManager: MonoBehaviour
         }
         else if (phase3IntroUI.activeSelf)
         {
+            StartCoroutine(SwitchUI(phase3IntroUI, phase3FarTaskUI));
+            StartCoroutine(HideUI(nextButtonUI));
+            environmentAnimationController.AnimateShowObjects(phase3Environment);
+            toggleDepthCueController.SetStartingCueState();
             //studyDataManager.SaveCSV();
             //Debug.Log("LENKUEP" + Application.persistentDataPath);
+            StartCoroutine(TEst());
         }
 
+    }
+
+    private IEnumerator TEst()
+    {
+        yield return new WaitForSeconds(5f);
+        toggleDepthCueController.DisableAllCues();
+        yield return new WaitForSeconds(3f);
+        toggleDepthCueController.ToggleLinearPerspective();
+        yield return new WaitForSeconds(3f);
+        toggleDepthCueController.ToggleHeightInFieldOfView();
+        yield return new WaitForSeconds(3f);
+        toggleDepthCueController.ToggleKnownSize();
+        yield return new WaitForSeconds(3f);
+        toggleDepthCueController.ToggleRelativeSize();
+        yield return new WaitForSeconds(3f);
+        toggleDepthCueController.ToggleMotionParallax();
+        yield return new WaitForSeconds(3f);
+        toggleDepthCueController.ToggleShapeFromShading();
+        yield return new WaitForSeconds(3f);
+        toggleDepthCueController.ToggleOcclusion();
     }
 }

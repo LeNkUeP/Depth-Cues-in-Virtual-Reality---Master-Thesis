@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class CarDespawner : MonoBehaviour
+public class AccretionDespawner : MonoBehaviour
 {
     private void OnEnable()
     {
@@ -9,10 +9,9 @@ public class CarDespawner : MonoBehaviour
 
     void OnTriggerEnter(Collider other)
     {
-        if (other.gameObject.CompareTag("car"))
+        if (other.gameObject.CompareTag("accretionObject"))
         {
-            //Destroy(other.gameObject);
-            other.gameObject.GetComponent<Car>().enabled = false;
+            other.gameObject.GetComponent<AccretionObject>().enabled = false;
             other.transform.position = other.transform.parent.position;
         }
     }
