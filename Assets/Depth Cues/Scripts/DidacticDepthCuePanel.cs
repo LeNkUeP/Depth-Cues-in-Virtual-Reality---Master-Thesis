@@ -12,21 +12,21 @@ public class DidacticDepthCuePanel : MonoBehaviour
     public TextMeshProUGUI currentCueExplanation;
     public GameObject nextButtonUI;
 
-    private bool shadowCastWasToggled = true;
-    private bool shapeFromShadingWasToggled = true;
-    private bool occlusionWasToggled = true;
-    private bool disparityWasToggled = true;
-    private bool motionParallaxWasToggled = true;
-    private bool atmosphericPerspectiveWasToggled = true;
-    private bool relativeSizeWasToggled = true;
-    private bool knownSizeWasToggled = true;
-    private bool heightInFieldOfViewWasToggled = true;
-    private bool accommodationWasToggled = true;
-    private bool convergenceWasToggled = true;
-    private bool imageBlurWasToggled = true;
-    private bool textureGradientWasToggled = true;
-    private bool linearPerspectiveWasToggled = true;
-    private bool accretionWasToggled = true;
+    private bool shadowCastWasToggled = false;
+    private bool shapeFromShadingWasToggled = false;
+    private bool occlusionWasToggled = false;
+    private bool disparityWasToggled = false;
+    private bool motionParallaxWasToggled = false;
+    private bool atmosphericPerspectiveWasToggled = false;
+    private bool relativeSizeWasToggled = false;
+    private bool knownSizeWasToggled = false;
+    private bool heightInFieldOfViewWasToggled = false;
+    private bool accommodationWasToggled = false;
+    private bool convergenceWasToggled = false;
+    private bool imageBlurWasToggled = false;
+    private bool textureGradientWasToggled = false;
+    private bool linearPerspectiveWasToggled = false;
+    private bool accretionWasToggled = false;
 
     [Header("Binocular disparity - Settings")]
     public GameObject binocularDisparityVideo;
@@ -46,8 +46,8 @@ public class DidacticDepthCuePanel : MonoBehaviour
     public GameObject accretionVideo;
     private string accretionHeading = "Akkretion";
     private string accretionExplanation = "Bewegt sich der Beobachter oder ein Objekt, werden zuvor verdeckte Bereiche " +
-        "eines Hintergrundobjekts sukzessive sichtbar (Deletion und Accretion). Diese graduelle Veränderung liefert Information " +
-        "über Tiefenstaffelung zwischen Vorder- und Hintergrund.";
+        "eines Hintergrundobjekts sukzessive sichtbar (Deletion und Accretion). Ein Beispiel wäre der Blick aus dem Auto " +
+        "bei der Fahrt, Objekte in der Ferne werden dauerhaft von vorbeiziehenden Bäumen oder Objekten verdeckt und entblöst.";
 
     [Header("Occlusion - Settings")]
     public GameObject occlusionVideo;
@@ -98,7 +98,8 @@ public class DidacticDepthCuePanel : MonoBehaviour
     public GameObject linearPerspectiveVideo;
     private string linearPerspectiveHeading = "Lineare Perspektive";
     private string linearPerspectiveExplanation = "Linearperspektive beschreibt das Phänomen, dass parallele Linien in der Realität" +
-        " mit zunehmender Entfernung scheinbar aufeinander zulaufen und sich in einem Fluchtpunkt treffen.";
+        " mit zunehmender Entfernung scheinbar aufeinander zulaufen und sich in einem Fluchtpunkt treffen. Somit entsteht auch die" +
+        " Illusion, dass weit entfernte Objekte kleiner sind als nahe, auch wenn sie gleich groß sind.";
 
     [Header("Shadow cast - Settings")]
     public GameObject shadowCastVideo;
@@ -118,22 +119,23 @@ public class DidacticDepthCuePanel : MonoBehaviour
     public GameObject relativeSizeVideo;
     private string relativeSizeHeading = "Relative Größe";
     private string relativeSizeExplanation = "Befinden sich mehrere gleichartige Objekte im Sichtfeld, " +
-        "erscheint das kleinere Objekt weiter entfernt als das größere. Dieser Hinweis funktioniert besonders zuverlässig, " +
-        "wenn bekannt ist, dass die Objekte tatsächlich gleich groß sind. Die Interpretation erfolgt durch einen Vergleich " +
-        "der retinalen Bildgröße.";
+        "erscheint das kleinere Objekt weiter entfernt als das größere. Es wird angenommen, dass der visuelle Größenunterschied" +
+        " durch die Entfernungen zustande kommt, und nicht durch unterschiedliche Größen der Objekte selbst." +
+        " Dieser Hinweis funktioniert besonders zuverlässig, wenn bekannt ist, dass die Objekte tatsächlich gleich groß sind.";
 
     [Header("Known size - Settings")]
     public GameObject knownSizeVideo;
     private string knownSizeHeading = "Bekannte Größe";
     private string knownSizeExplanation = "Ist die reale Größe eines Objekts bekannt, kann aus seiner retinalen Bildgröße " +
         "auf die Entfernung geschlossen werden. Ein Mensch beispielsweise wird bei kleiner retinaler Abbildung " +
-        "als weiter entfernt interpretiert. Dieser Prozess basiert auf erlernten Größenkonstanten.";
+        "als weiter entfernt interpretiert.";
 
     [Header("Height in field of view - Settings")]
     public GameObject heightInFieldOfViewVideo;
     private string heightInFieldOfViewHeading = "Höhe im Gesichtsfeld";
     private string heightInFieldOfViewExplanation = "Objekte, die näher am Horizont bzw. höher im Gesichtsfeld erscheinen, " +
-        "werden als weiter entfernt interpretiert.";
+        "werden als weiter entfernt interpretiert. Besonders wenn man den Kopf anheben muss um ein Objekt anzuschauen," +
+        " wirkt dieses weiter entfernt als andere.";
 
     public void UpdateDidacticUI(string heading, string explanation, GameObject video)
     {
@@ -158,12 +160,11 @@ public class DidacticDepthCuePanel : MonoBehaviour
             video.GetComponent<RectTransform>().localScale = Vector3.zero;
             HideTextAndVideoUI();
         }
-
     }
 
     public void ToggleVisibility()
     {
-        // only hide ddo not dedactivate this gameobject, update needs to run
+        // only hide do not dedactivate this gameobject, update needs to run
         if (gameObject.transform.localScale == Vector3.zero)
         {
             StartCoroutine(ShowUI(gameObject));

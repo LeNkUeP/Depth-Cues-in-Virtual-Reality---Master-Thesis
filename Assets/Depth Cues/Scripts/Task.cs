@@ -1,22 +1,15 @@
+using System.Collections;
 using UnityEngine;
 
 public abstract class Task : MonoBehaviour
 {
-    public GameObject environmentScene;
-    public EnvironmentAnimationController environmentAnimationController;
+    public DidacticPhaseManager phaseManager;
+    public GameObject enterButtonUI;
+    public bool trainingMode;
+    public int amountOfTrainingIterations;
+    public int iterationCounter = 1;
 
-    public void AnimateShowScene()
-    {
-        environmentAnimationController.AnimateShowObjects(environmentScene);
-    }
+    public abstract void ProcessTaskCompletion();
 
-    public void AnimateHideScene()
-    {
-        environmentAnimationController.AnimateHideObjects(environmentScene);
-    }
-
-    public void TaskFullfilled()
-    {
-
-    }
+    public abstract void RandomizeScene();
 }
